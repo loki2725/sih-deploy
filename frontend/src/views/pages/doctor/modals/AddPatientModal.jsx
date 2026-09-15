@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { T } from "@/models/constant.js";
+import { API_BASE_URL } from "@/models/apiModel.js";
 import { Card, Field, Button } from "@/views/components/common/Primitive.jsx";
 
 export function AddPatientModal({ onClose, onConnected }) {
@@ -15,7 +16,7 @@ export function AddPatientModal({ onClose, onConnected }) {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       const token = localStorage.getItem("token") || user.token;
 
-      const response = await fetch("http://localhost:5001/api/doctor/link", {
+      const response = await fetch(`${API_BASE_URL}/api/doctor/link`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

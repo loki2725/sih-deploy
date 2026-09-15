@@ -9,10 +9,22 @@ import { registerChatSocket } from "./sockets/chatSocket.js";
 const PORT = process.env.PORT || 5001;
 const server = http.createServer(app);
 
+const defaultOrigins = ["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"];
+const configuredOrigins = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(",").map((url) => url.trim().replace(/\/$/, ""))
+  : [];
+const allowedOrigins = [...new Set([...defaultOrigins, ...configuredOrigins])];
+
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173", "http://localhost:5174"],
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     methods: ["GET", "POST"],
+    credentials: true,
   },
 });
 

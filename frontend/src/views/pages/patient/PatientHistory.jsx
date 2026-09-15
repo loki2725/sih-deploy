@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Activity, Timer, Filter } from "lucide-react";
 import { T } from "@/models/constant.js";
+import { API_BASE_URL } from "@/models/apiModel.js";
 import { Card, Badge } from "@/views/components/common/Primitive.jsx";
 import {
   LineChart,
@@ -30,7 +31,7 @@ export function PatientHistory() {
         }
 
         const response = await fetch(
-          `http://localhost:5001/api/games/history/${patientId}`,
+          `${API_BASE_URL}/api/games/history/${patientId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`, // Attach token to pass verifyToken

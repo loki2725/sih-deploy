@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Send } from "lucide-react";
 import { io } from "socket.io-client";
 import { T } from "@/models/constant.js";
+import { API_BASE_URL } from "@/models/apiModel.js";
 import { Card, Button } from "./Primitive";
 
 export function ChatBox({ recipientId, recipientName }) {
@@ -20,7 +21,7 @@ export function ChatBox({ recipientId, recipientName }) {
 
   // 1. Initialize and clean up socket connection
   useEffect(() => {
-    const newSocket = io("http://localhost:5001");
+    const newSocket = io(API_BASE_URL);
     setSocket(newSocket);
 
     return () => {
@@ -33,7 +34,7 @@ export function ChatBox({ recipientId, recipientName }) {
     const initChat = async () => {
       try {
         const response = await fetch(
-          "http://localhost:5001/api/chat/conversation",
+          `${API_BASE_URL}/api/chat/conversation`,
           {
             method: "POST",
             headers: {
@@ -53,7 +54,7 @@ export function ChatBox({ recipientId, recipientName }) {
           }
 
           const msgRes = await fetch(
-            `http://localhost:5001/api/chat/${conv._id}/messages`,
+            `${API_BASE_URL}/api/chat/${conv._id}/messages`,
             {
               headers: { Authorization: `Bearer ${token}` },
             },

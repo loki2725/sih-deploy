@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { T } from "@/models/constant.js";
+import { API_BASE_URL } from "@/models/apiModel.js";
 
 export function SequenceGame() {
   const navigate = useNavigate();
@@ -65,7 +66,7 @@ export function SequenceGame() {
     };
 
     try {
-      const response = await fetch("http://localhost:5001/api/games/log", {
+      const response = await fetch(`${API_BASE_URL}/api/games/log`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

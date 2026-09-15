@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ShieldAlert, Pencil, X, Check, Loader2 } from "lucide-react";
 import { T } from "@/models/constant.js";
+import { API_BASE_URL } from "@/models/apiModel.js";
 import { Card, Button } from "@/views/components/common/Primitive.jsx";
 
 const EMPTY_DETAILS = {
@@ -69,7 +70,7 @@ export function EmergencyDetailsCard({ details, onSaved }) {
       const token = localStorage.getItem("token") || user.token;
 
       const res = await fetch(
-        "http://localhost:5001/api/patient/emergency-details",
+        `${API_BASE_URL}/api/patient/emergency-details`,
         {
           method: "PATCH",
           headers: {

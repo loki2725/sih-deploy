@@ -9,6 +9,7 @@ import {
   X,
 } from "lucide-react";
 import { T } from "@/models/constant.js";
+import { API_BASE_URL } from "@/models/apiModel.js";
 import { Card, Badge, Button } from "@/views/components/common/Primitive.jsx";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -61,7 +62,7 @@ export function DoctorAppointments() {
       if (!token) return;
 
       const res = await fetch(
-        "http://localhost:5001/api/appointments/doctor",
+        `${API_BASE_URL}/api/appointments/doctor`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
@@ -164,7 +165,7 @@ export function DoctorAppointments() {
       ).toISOString();
 
       const res = await fetch(
-        `http://localhost:5001/api/appointments/${schedulingId}/schedule`,
+        `${API_BASE_URL}/api/appointments/${schedulingId}/schedule`,
         {
           method: "POST",
           headers: {
@@ -194,7 +195,7 @@ export function DoctorAppointments() {
       const token = localStorage.getItem("token") || user.token;
 
       const res = await fetch(
-        `http://localhost:5001/api/appointments/${appointmentId}/decline`,
+        `${API_BASE_URL}/api/appointments/${appointmentId}/decline`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },

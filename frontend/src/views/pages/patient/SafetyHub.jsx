@@ -9,6 +9,7 @@ import {
   User,
 } from "lucide-react";
 import { T } from "@/models/constant.js";
+import { API_BASE_URL } from "@/models/apiModel.js";
 import { Card, Badge, Button } from "@/views/components/common/Primitive.jsx";
 import { EmergencyDetailsCard } from "@/views/pages/patient/EmergencyDetailsCard.jsx";
 
@@ -66,7 +67,7 @@ export function SafetyHub() {
 
   const fetchProfile = async () => {
     try {
-      const res = await fetch("http://localhost:5001/api/auth/me", {
+      const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
         headers: authHeader(),
       });
       if (res.ok) {
@@ -82,7 +83,7 @@ export function SafetyHub() {
 
   const fetchAppointments = async () => {
     try {
-      const res = await fetch("http://localhost:5001/api/appointments/mine", {
+      const res = await fetch(`${API_BASE_URL}/api/appointments/mine`, {
         headers: authHeader(),
       });
       if (res.ok) {
@@ -98,7 +99,7 @@ export function SafetyHub() {
 
   const fetchDoctors = async () => {
     try {
-      const res = await fetch("http://localhost:5001/api/patient/doctors", {
+      const res = await fetch(`${API_BASE_URL}/api/patient/doctors`, {
         headers: authHeader(),
       });
       if (res.ok) {
@@ -126,7 +127,7 @@ export function SafetyHub() {
     setSosStatus("sending");
     setSosDetail("");
     try {
-      const res = await fetch("http://localhost:5001/api/sos/alert", {
+      const res = await fetch(`${API_BASE_URL}/api/sos/alert`, {
         method: "POST",
         headers: authHeader(),
       });
@@ -162,7 +163,7 @@ export function SafetyHub() {
     setRequestingId(doctorId);
     try {
       const res = await fetch(
-        "http://localhost:5001/api/appointments/request",
+        `${API_BASE_URL}/api/appointments/request`,
         {
           method: "POST",
           headers: {
@@ -189,7 +190,7 @@ export function SafetyHub() {
     setCancellingId(appointmentId);
     try {
       const res = await fetch(
-        `http://localhost:5001/api/appointments/${appointmentId}/cancel`,
+        `${API_BASE_URL}/api/appointments/${appointmentId}/cancel`,
         {
           method: "POST",
           headers: authHeader(),

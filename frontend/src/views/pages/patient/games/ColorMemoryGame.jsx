@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ChevronLeft, BrainCircuit } from "lucide-react";
 import { T } from "@/models/constant.js";
+import { API_BASE_URL } from "@/models/apiModel.js";
 import { Card, Button, Badge } from "@/views/components/common/Primitive.jsx";
 
 // ---- Game Palette ---------------------------------------------------------
@@ -104,8 +105,6 @@ export function ColorMemoryGame({ onBack }) {
   useEffect(() => clearTimers, []);
 
   // --- BACKEND INTEGRATION ---
-  // --- BACKEND INTEGRATION ---
-  // --- BACKEND INTEGRATION ---
   const saveGameSession = async (finalLevel) => {
     // Ensure we don't divide by zero if they click instantly
     const endTime = Date.now();
@@ -126,7 +125,7 @@ export function ColorMemoryGame({ onBack }) {
       const token = localStorage.getItem("token") || user.token;
       const patientId = user._id || user.id;
 
-      const response = await fetch("http://localhost:5001/api/games/log", {
+      const response = await fetch(`${API_BASE_URL}/api/games/log`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

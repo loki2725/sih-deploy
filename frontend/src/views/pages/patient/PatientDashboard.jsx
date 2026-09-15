@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { T } from "@/models/constant.js";
+import { API_BASE_URL } from "@/models/apiModel.js";
 import { ChatBox } from "@/views/components/common/ChatBox.jsx"; // <-- ADDED CHAT IMPORT
 import { MessageSquare, LayoutDashboard } from "lucide-react";
 
@@ -27,7 +28,7 @@ export function PatientDashboard() {
         }
 
         const response = await fetch(
-          `http://localhost:5001/api/games/history/${patientId}`,
+          `${API_BASE_URL}/api/games/history/${patientId}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           },

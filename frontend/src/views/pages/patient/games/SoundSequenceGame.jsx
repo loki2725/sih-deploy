@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ChevronLeft, Volume2 } from "lucide-react";
 import { T } from "@/models/constant.js";
+import { API_BASE_URL } from "@/models/apiModel.js";
 import { Card, Button, Badge } from "@/views/components/common/Primitive.jsx";
 
 // ---- SOUND DATA ---------------------------------------------------------
@@ -362,7 +363,7 @@ export function SoundSequenceGame({ onBack }) {
       const token = localStorage.getItem("token") || user.token;
       const patientId = user._id || user.id;
 
-      await fetch("http://localhost:5001/api/games/log", {
+      await fetch(`${API_BASE_URL}/api/games/log`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

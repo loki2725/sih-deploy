@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import { T } from "@/models/constant.js";
+import { API_BASE_URL } from "@/models/apiModel.js";
 import { Card, Badge, Button } from "@/views/components/common/Primitive.jsx";
 import { ChatBox } from "@/views/components/common/ChatBox.jsx"; // Ensure this path matches your file structure
 
@@ -31,7 +32,7 @@ export function PatientProfile() {
       const token = localStorage.getItem("token") || user.token;
       if (!token) return;
 
-      const response = await fetch("http://localhost:5001/api/auth/me", {
+      const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -55,7 +56,7 @@ export function PatientProfile() {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       const token = localStorage.getItem("token") || user.token;
 
-      const res = await fetch("http://localhost:5001/api/patient/doctors", {
+      const res = await fetch(`${API_BASE_URL}/api/patient/doctors`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -75,7 +76,7 @@ export function PatientProfile() {
       const token = localStorage.getItem("token") || user.token;
 
       const res = await fetch(
-        "http://localhost:5001/api/patient/request-doctor",
+        `${API_BASE_URL}/api/patient/request-doctor`,
         {
           method: "POST",
           headers: {
@@ -105,7 +106,7 @@ export function PatientProfile() {
       const token = localStorage.getItem("token") || user.token;
 
       const res = await fetch(
-        `http://localhost:5001/api/patient/medications/${medId}/status`,
+        `${API_BASE_URL}/api/patient/medications/${medId}/status`,
         {
           method: "PATCH",
           headers: { Authorization: `Bearer ${token}` },

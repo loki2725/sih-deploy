@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Brain, Activity } from "lucide-react";
 import { T } from "@/models/constant.js";
+import { API_BASE_URL } from "@/models/apiModel.js";
 import { Button, Card } from "@/views/components/common/Primitive.jsx";
 
 export function LoginScreen() {
@@ -42,8 +43,8 @@ export function LoginScreen() {
     setError(null);
 
     const endpoint = isRegistering
-      ? "http://localhost:5001/api/auth/register"
-      : "http://localhost:5001/api/auth/login";
+      ? `${API_BASE_URL}/api/auth/register`
+      : `${API_BASE_URL}/api/auth/login`;
 
     const payload = isRegistering
       ? { ...formData, role: selectedRole }
@@ -134,7 +135,7 @@ export function LoginScreen() {
     setError(null);
 
     try {
-      const response = await fetch("http://localhost:5001/api/auth/verify-otp", {
+      const response = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: formData.email, otp }),
@@ -165,7 +166,7 @@ export function LoginScreen() {
     setOtpMessage(null);
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:5001/api/auth/resend-otp", {
+      const response = await fetch(`${API_BASE_URL}/api/auth/resend-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: formData.email }),

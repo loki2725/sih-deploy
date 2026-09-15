@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { UserCheck, Clock, ChevronRight, Stethoscope } from "lucide-react";
 import { T } from "@/models/constant.js";
+import { API_BASE_URL } from "@/models/apiModel.js";
 import { Badge } from "@/views/components/common/Primitive.jsx";
 
 export function DoctorDashboard({ onOpenPatient }) {
@@ -33,7 +34,7 @@ export function DoctorDashboard({ onOpenPatient }) {
       const token = localStorage.getItem("token") || user.token;
 
       const response = await fetch(
-        "http://localhost:5001/api/doctor/patients",
+        `${API_BASE_URL}/api/doctor/patients`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -57,7 +58,7 @@ export function DoctorDashboard({ onOpenPatient }) {
       const token = localStorage.getItem("token") || user.token;
 
       const response = await fetch(
-        "http://localhost:5001/api/doctor/accept-patient",
+        `${API_BASE_URL}/api/doctor/accept-patient`,
         {
           method: "POST",
           headers: {
