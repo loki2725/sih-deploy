@@ -1,0 +1,228 @@
+@import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,200..800;1,200..800&display=swap');
+@import "tailwindcss";
+
+:root {
+  /* NeuroNest Design System */
+  --nn-bg: #F7F5EF;
+  --nn-surface: #FFFFFF;
+  --nn-surface-subtle: #FAFAF7;
+  --nn-text: #263238;
+  --nn-text-secondary: #546E7A;
+  --nn-primary: #3F6F68;
+  --nn-primary-dark: #345E58;
+  --nn-primary-soft: #E7F0EE;
+  --nn-secondary: #4F7D5A;
+  --nn-secondary-soft: #EAF1EA;
+  --nn-warning: #C58B3A;
+  --nn-warning-soft: #F8EEDC;
+  --nn-danger: #A94F4F;
+  --nn-danger-soft: #F7E8E8;
+  --nn-border: #DCE3E0;
+  --nn-focus: #3F6F68;
+  --nn-shadow: 0 8px 24px rgba(38, 50, 56, 0.08);
+  --nn-radius-card: 16px;
+  --nn-radius-control: 10px;
+
+  font-family: 'Atkinson Hyperlegible Next', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 400;
+  font-optical-sizing: auto;
+  color: var(--nn-text);
+  background: var(--nn-bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+
+html { background: var(--nn-bg); }
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--nn-bg);
+  color: var(--nn-text);
+  font-family: inherit;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid rgba(63, 111, 104, 0.35);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--nn-primary);
+  color: #fff;
+}
+
+/* Shared semantic helpers. */
+.nn-primary-gradient {
+  background: linear-gradient(135deg, #3F6F68 0%, #4F7D5A 100%);
+}
+
+.nn-soft-gradient {
+  background: linear-gradient(135deg, #F7F5EF 0%, #FAFAF7 100%);
+}
+
+.nn-card {
+  background: var(--nn-surface);
+  border: 1px solid var(--nn-border);
+  border-radius: var(--nn-radius-card);
+  box-shadow: var(--nn-shadow);
+}
+
+/* --------------------------------------------------------------------------
+   NeuroNest responsive typography + overflow protection
+   -------------------------------------------------------------------------- */
+
+html {
+  width: 100%;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  width: 100%;
+  overflow-x: hidden;
+  overflow-wrap: break-word;
+  word-break: normal;
+  line-height: 1.55;
+}
+
+/* Let grid/flex children shrink instead of forcing horizontal scrolling. */
+#root,
+#root > * {
+  min-width: 0;
+}
+
+*,
+*::before,
+*::after {
+  min-width: 0;
+}
+
+/* Keep natural wrapping for normal text. Only truly unbreakable strings
+   (URLs, IDs, long filenames, etc.) are allowed to break. */
+p,
+li,
+label,
+small,
+strong,
+span,
+button,
+a,
+input,
+textarea,
+select,
+option {
+  overflow-wrap: break-word;
+}
+
+p,
+li {
+  text-wrap: pretty;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  line-height: 1.18;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  margin-block-start: 0;
+}
+
+/* Prevent fixed-size controls from becoming awkward on narrow phones. */
+button,
+a {
+  max-inline-size: 100%;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-inline-size: 100%;
+}
+
+input,
+textarea,
+select {
+  max-inline-size: 100%;
+}
+
+/* Fluid type: large headings can scale down on phones without becoming tiny.
+   clamp() keeps the minimum readable size while avoiding oversized desktop
+   headings on small screens. */
+.nn-fluid-display {
+  font-size: clamp(1.75rem, 5vw, 2.75rem);
+}
+
+.nn-fluid-title {
+  font-size: clamp(1.35rem, 3.2vw, 2rem);
+}
+
+.nn-fluid-body {
+  font-size: clamp(1rem, 1.3vw, 1.125rem);
+}
+
+@media (max-width: 640px) {
+  body {
+    line-height: 1.58;
+  }
+
+  h1 {
+    font-size: clamp(1.75rem, 8vw, 2.25rem);
+  }
+
+  h2 {
+    font-size: clamp(1.4rem, 6vw, 1.9rem);
+  }
+
+  h3 {
+    font-size: clamp(1.2rem, 5vw, 1.5rem);
+  }
+
+  /* Avoid clipped labels when cards/buttons get narrow. */
+  button,
+  a {
+    white-space: normal;
+    text-wrap: balance;
+  }
+
+  /* Keep common one-line UI controls usable when they are intentionally
+     horizontal (e.g. tabs/status chips). */
+  .whitespace-nowrap {
+    white-space: nowrap;
+    overflow-x: auto;
+    max-width: 100%;
+  }
+}
+
+/* Respect users who ask their OS/browser for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
