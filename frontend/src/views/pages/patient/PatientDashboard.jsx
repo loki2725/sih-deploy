@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { T } from "@/models/constant.js";
-import { API_BASE_URL } from "@/models/apiModel.js";
 import { ChatBox } from "@/views/components/common/ChatBox.jsx"; // <-- ADDED CHAT IMPORT
 import { MessageSquare, LayoutDashboard } from "lucide-react";
+import { API_BASE_URL } from "@/models/apiModel.js";
 
 export function PatientDashboard() {
   const [history, setHistory] = useState([]);
@@ -237,7 +237,7 @@ export function PatientDashboard() {
                         {session.mistakesMade !== undefined && (
                           <span style={{ color: T.inkSoft }}>
                             Mistakes{" "}
-                            <strong style={{ color: "#EF4444" }}>
+                            <strong style={{ color: "#A94F4F" }}>
                               {session.mistakesMade}
                             </strong>
                           </span>

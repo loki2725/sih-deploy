@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { ShieldAlert, Pencil, X, Check, Loader2 } from "lucide-react";
 import { T } from "@/models/constant.js";
-import { API_BASE_URL } from "@/models/apiModel.js";
 import { Card, Button } from "@/views/components/common/Primitive.jsx";
+import { API_BASE_URL } from "@/models/apiModel.js";
 
 const EMPTY_DETAILS = {
   contactName: "",

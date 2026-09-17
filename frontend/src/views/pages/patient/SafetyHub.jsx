@@ -9,9 +9,9 @@ import {
   User,
 } from "lucide-react";
 import { T } from "@/models/constant.js";
-import { API_BASE_URL } from "@/models/apiModel.js";
 import { Card, Badge, Button } from "@/views/components/common/Primitive.jsx";
 import { EmergencyDetailsCard } from "@/views/pages/patient/EmergencyDetailsCard.jsx";
+import { API_BASE_URL } from "@/models/apiModel.js";
 
 // Formats the live clock card. Kept deliberately large/simple text since
 // this whole tab follows the dementia-friendly accessibility approach
@@ -127,9 +127,29 @@ export function SafetyHub() {
     setSosStatus("sending");
     setSosDetail("");
     try {
+      if (!navigator.geolocation) {
+        throw new Error("Your browser does not support location access.");
+      }
+
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
+        });
+      });
+
       const res = await fetch(`${API_BASE_URL}/api/sos/alert`, {
         method: "POST",
-        headers: authHeader(),
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeader(),
+        },
+        body: JSON.stringify({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+        }),
       });
 
       const data = await res.json();
@@ -141,12 +161,20 @@ export function SafetyHub() {
       setSosStatus("sent");
       setSosDetail(
         data.hasLinkedDoctor
-          ? "Your doctor and your own email have been notified."
-          : "You aren't connected to a doctor yet, so only your own email was notified.",
+          ? "Your location was emailed to you, and your doctor received an SOS email with a one-time OTP to reveal the location."
+          : "Your SOS and captured location were emailed to you. You aren't connected to a doctor, so no doctor alert was sent.",
       );
     } catch (err) {
       setSosStatus("error");
-      setSosDetail(err.message);
+      const message =
+        err?.code === 1
+          ? "Location permission was denied. Please allow location access and press SOS again."
+          : err?.code === 2
+            ? "Your location could not be determined. Please try again."
+            : err?.code === 3
+              ? "Location request timed out. Please try SOS again."
+              : err?.message || "Failed to send SOS alert.";
+      setSosDetail(message);
     } finally {
       setTimeout(() => setSosStatus(null), 6000);
     }

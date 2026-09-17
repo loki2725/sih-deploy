@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ChevronLeft, BrainCircuit } from "lucide-react";
 import { T } from "@/models/constant.js";
-import { API_BASE_URL } from "@/models/apiModel.js";
 import { Card, Button, Badge } from "@/views/components/common/Primitive.jsx";
+import { API_BASE_URL } from "@/models/apiModel.js";
 
 // ---- Game Palette ---------------------------------------------------------
 const PALETTE = [
@@ -104,6 +104,8 @@ export function ColorMemoryGame({ onBack }) {
 
   useEffect(() => clearTimers, []);
 
+  // --- BACKEND INTEGRATION ---
+  // --- BACKEND INTEGRATION ---
   // --- BACKEND INTEGRATION ---
   const saveGameSession = async (finalLevel) => {
     // Ensure we don't divide by zero if they click instantly

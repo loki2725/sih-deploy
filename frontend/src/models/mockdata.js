@@ -41,6 +41,20 @@ export const games = [
     difficulty: "Medium",
     icon: "🎵",
   },
+  {
+    key: "numberOrder",
+    name: "Number Order",
+    desc: "Memorize hidden numbers and tap them in ascending order.",
+    difficulty: "Adaptive",
+    icon: "🔢",
+  },
+  {
+    key: "oddOneOut",
+    name: "Odd One Out",
+    desc: "Spot the one shape or color that doesn't match.",
+    difficulty: "Adaptive",
+    icon: "🔍",
+  },
 ];
 
 // ... keep your existing performanceHistory array below this!

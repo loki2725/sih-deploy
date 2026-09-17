@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { T } from "@/models/constant.js";
-import { API_BASE_URL } from "@/models/apiModel.js";
 import { Card, Field, Button } from "@/views/components/common/Primitive.jsx";
+import { API_BASE_URL } from "@/models/apiModel.js";
 
 export function AddPatientModal({ onClose, onConnected }) {
   const [code, setCode] = useState("");

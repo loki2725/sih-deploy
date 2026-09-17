@@ -8,11 +8,13 @@ import {
   ShieldCheck,
   MessageCircle,
   X,
+  Bell,
 } from "lucide-react";
 import { T } from "@/models/constant.js";
-import { API_BASE_URL } from "@/models/apiModel.js";
 import { Card, Badge, Button } from "@/views/components/common/Primitive.jsx";
 import { ChatBox } from "@/views/components/common/ChatBox.jsx"; // Ensure this path matches your file structure
+import { careController } from "@/controllers/careController.js";
+import { API_BASE_URL } from "@/models/apiModel.js";
 
 export function PatientProfile() {
   const [profileData, setProfileData] = useState(null);
@@ -39,6 +41,7 @@ export function PatientProfile() {
       if (response.ok) {
         const data = await response.json();
         setProfileData(data);
+        await careController.markCareItemsChecked();
       }
     } catch (error) {
       console.error("Failed to fetch profile:", error);
@@ -49,6 +52,11 @@ export function PatientProfile() {
 
   useEffect(() => {
     fetchProfile();
+
+    // Refresh around midnight so the previous day's completed care plan
+    // disappears from the patient view when the new day starts.
+    const timer = setInterval(fetchProfile, 60 * 1000);
+    return () => clearInterval(timer);
   }, []);
 
   const fetchDoctors = async () => {
@@ -99,27 +107,27 @@ export function PatientProfile() {
     }
   };
 
+  const handleToggleReminder = async (reminderId) => {
+    if (!reminderId) return;
+    try {
+      const updatedReminders = await careController.toggleDoctorReminder(reminderId);
+      setProfileData((prev) => ({
+        ...prev,
+        doctorReminders: updatedReminders,
+      }));
+    } catch (err) {
+      console.error("Failed to update doctor reminder:", err);
+    }
+  };
+
   const handleToggleMedication = async (medId) => {
     if (!medId) return;
     try {
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
-      const token = localStorage.getItem("token") || user.token;
-
-      const res = await fetch(
-        `${API_BASE_URL}/api/patient/medications/${medId}/status`,
-        {
-          method: "PATCH",
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-
-      if (res.ok) {
-        const updatedMeds = await res.json();
-        setProfileData((prev) => ({
-          ...prev,
-          medications: updatedMeds,
-        }));
-      }
+      const updatedMeds = await careController.toggleMedication(medId);
+      setProfileData((prev) => ({
+        ...prev,
+        medications: updatedMeds,
+      }));
     } catch (err) {
       console.error("Failed to update medication status:", err);
     }
@@ -272,6 +280,49 @@ export function PatientProfile() {
               >
                 <Badge tone={m.taken ? "mint" : "amber"}>
                   {m.taken ? "Taken ✓" : "Pending"}
+                </Badge>
+              </button>
+            </div>
+          ))
+        )}
+      </Card>
+
+      {/* Doctor Reminders Card */}
+      <Card>
+        <div
+          className="font-semibold mb-3 flex items-center gap-2"
+          style={{ color: T.ink }}
+        >
+          <Bell size={16} /> Doctor Reminders
+        </div>
+
+        {(profileData.doctorReminders || []).length === 0 ? (
+          <div className="text-sm py-2" style={{ color: T.inkSoft }}>
+            No reminders from your doctor yet.
+          </div>
+        ) : (
+          profileData.doctorReminders.map((reminder, i) => (
+            <div
+              key={reminder._id || i}
+              className="flex items-start justify-between gap-3 py-2.5"
+              style={{ borderTop: i > 0 ? `1px solid ${T.line}` : "none" }}
+            >
+              <div className="min-w-0">
+                <div className="text-sm font-medium break-words" style={{ color: T.ink }}>
+                  {reminder.text}
+                </div>
+                <div className="text-xs mt-1" style={{ color: T.inkSoft }}>
+                  Scheduled for {reminder.time}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleToggleReminder(reminder._id)}
+                className="cursor-pointer flex-shrink-0"
+                title="Mark reminder as checked"
+              >
+                <Badge tone={reminder.checked ? "mint" : "amber"}>
+                  {reminder.checked ? "Checked ✓" : "Pending"}
                 </Badge>
               </button>
             </div>

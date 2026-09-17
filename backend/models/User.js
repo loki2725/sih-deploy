@@ -6,6 +6,16 @@ const medicationSchema = new mongoose.Schema({
   time: { type: String, default: "Morning" },
   prescribedAt: { type: Date, default: Date.now },
   taken: { type: Boolean, default: false },
+  lastCheckedAt: { type: Date, default: null },
+  lastTakenAt: { type: Date, default: null },
+  historyId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CareHistory",
+    default: null,
+  },
+  lastReminderSentForDate: { type: String, default: null },
+  lastReminderSentAt: { type: Date, default: null },
+  doctorNotificationSentForDate: { type: String, default: null },
 });
 
 const diagnosisNoteSchema = new mongoose.Schema(
@@ -40,12 +50,19 @@ const userSchema = new mongoose.Schema({
     trim: true,
   },
   password: { type: String, required: true },
+  tokenVersion: { type: Number, default: 0 },
   role: { type: String, enum: ["patient", "doctor"], default: "patient" },
 
   // Email verification (OTP)
   isVerified: { type: Boolean, default: false },
   otp: { type: String, default: null },
   otpExpiresAt: { type: Date, default: null },
+
+  // Password reset OTP (kept separate from signup verification OTP)
+  passwordResetOtp: { type: String, default: null },
+  passwordResetOtpExpiresAt: { type: Date, default: null },
+  passwordResetLastSentAt: { type: Date, default: null },
+  passwordResetAttempts: { type: Number, default: 0 },
   age: { type: Number, default: null },
   condition: { type: String, default: "None listed" },
   risk: { type: String, enum: ["mint", "amber", "red"], default: "mint" },
@@ -58,6 +75,37 @@ const userSchema = new mongoose.Schema({
   // Each patient has their own separate list; only relevant when role
   // is "patient", but harmless to leave on the schema either way.
   pastDiagnoses: [diagnosisNoteSchema],
+
+  // Time-based reminders created by the linked doctor.
+  doctorReminders: [{
+    text: { type: String, required: true, trim: true },
+    time: { type: String, required: true, match: /^([01]\d|2[0-3]):[0-5]\d$/ },
+    checked: { type: Boolean, default: false },
+    checkedAt: { type: Date, default: null },
+    historyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "CareHistory",
+      default: null,
+    },
+    lastReminderSentForDate: { type: String, default: null },
+    lastReminderSentAt: { type: Date, default: null },
+    doctorNotificationSentForDate: { type: String, default: null },
+    createdAt: { type: Date, default: Date.now },
+  }],
+
+  // A patient viewing the medication/reminder area counts as checking
+  // their daily care items. The scheduler uses this for the 9 AM engagement check.
+  careItemsLastCheckedAt: { type: Date, default: null },
+  dailyEngagementReminderLastSentForDate: { type: String, default: null },
+  dailyGameReminderStageForDate: { type: String, default: null },
+  dailyGameReminderStage: { type: Number, default: 0 },
+
+  // Active medications/reminders belong to one local calendar day.
+  // At the next midnight the previous day's plan is archived and cleared.
+  carePlanDateKey: { type: String, default: null },
+
+  // Doctor preference: whether NeuroNest should notify this doctor about missed patient care activities.
+  careNotificationsEnabled: { type: Boolean, default: true },
 
   // Connection fields
   requestedDoctor: {

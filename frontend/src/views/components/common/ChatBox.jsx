@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { Send } from "lucide-react";
 import { io } from "socket.io-client";
 import { T } from "@/models/constant.js";
-import { API_BASE_URL } from "@/models/apiModel.js";
 import { Card, Button } from "./Primitive";
+import { API_BASE_URL } from "@/models/apiModel.js";
 
 export function ChatBox({ recipientId, recipientName }) {
   const [messages, setMessages] = useState([]);
@@ -121,7 +121,7 @@ export function ChatBox({ recipientId, recipientName }) {
         </h3>
         <span
           className="text-xs flex items-center gap-1"
-          style={{ color: "#10B981" }}
+          style={{ color: "#4F7D5A" }}
         >
           <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>{" "}
           Live Secure Connection

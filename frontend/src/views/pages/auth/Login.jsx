@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Brain, Activity } from "lucide-react";
 import { T } from "@/models/constant.js";
-import { API_BASE_URL } from "@/models/apiModel.js";
 import { Button, Card } from "@/views/components/common/Primitive.jsx";
+import { API_BASE_URL } from "@/models/apiModel.js";
 
 export function LoginScreen() {
   const [selectedRole, setSelectedRole] = useState(null);
@@ -218,14 +218,14 @@ export function LoginScreen() {
           <h1 className="text-5xl font-extrabold text-white mb-6 leading-tight tracking-tight">
             Elevating <br /> Cognitive Care.
           </h1>
-          <p className="text-lg text-indigo-100 max-w-md leading-relaxed font-medium">
+          <p className="text-lg text-white/90 max-w-md leading-relaxed font-medium">
             A professional platform connecting patients and doctors for seamless
             memory tracking, structured rehabilitation, and trusted cognitive
             health monitoring.
           </p>
         </div>
 
-        <div className="text-indigo-200 text-sm font-medium relative z-10">
+        <div className="text-white/75 text-sm font-medium relative z-10">
           © {new Date().getFullYear()} NeuroNest Healthcare
         </div>
       </div>
@@ -292,6 +292,17 @@ export function LoginScreen() {
                   {loading ? "Verifying..." : "Verify & Continue"}
                 </Button>
 
+                {!isRegistering && (
+                  <button
+                    type="button"
+                    onClick={() => navigate("/reset-password")}
+                    className="text-xs font-semibold hover:underline self-end cursor-pointer"
+                    style={{ color: T.primary }}
+                  >
+                    Forgot password?
+                  </button>
+                )}
+
                 <div className="flex justify-between items-center mt-2 text-xs">
                   <button
                     type="button"
@@ -328,7 +339,7 @@ export function LoginScreen() {
                   >
                     <Brain size={32} color={T.primary} />
                   </div>
-                  <h2 className="text-3xl font-extrabold mb-2 bg-gradient-to-br from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                  <h2 className="text-3xl font-extrabold mb-2 text-[#3F6F68]">
                     Welcome to NeuroNest
                   </h2>
                   <p
@@ -349,7 +360,7 @@ export function LoginScreen() {
                   <Button
                     variant="ghost"
                     onClick={() => setSelectedRole("doctor")}
-                    className="w-full py-4 text-base border-2 hover:bg-indigo-50/50 transition-all duration-200 cursor-pointer"
+                    className="w-full py-4 text-base border-2 hover:bg-[#E7F0EE] transition-all duration-200 cursor-pointer"
                   >
                     I am a Doctor
                   </Button>
@@ -512,6 +523,19 @@ export function LoginScreen() {
                       ? "Sign Up"
                       : "Sign In"}
                 </Button>
+
+                {!isRegistering && (
+                  <div className="flex justify-end -mt-1">
+                    <button
+                      type="button"
+                      onClick={() => navigate("/reset-password")}
+                      className="text-xs font-semibold hover:underline cursor-pointer"
+                      style={{ color: T.primary }}
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                )}
 
                 <div className="flex justify-between items-center mt-2 text-xs">
                   <button

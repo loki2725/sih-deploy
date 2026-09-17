@@ -1,7 +1,15 @@
 import { User } from "../models/User.js";
 import { GameSession } from "../models/GameSession.js";
-import { isDoctorLinkedToPatient } from "../utils/authorization.js";
-
+import { CareAlert } from "../models/CareAlert.js";
+import { CareHistory } from "../models/CareHistory.js";
+import { getLinkedPatient } from "../utils/authorization.js";
+import {
+  ensureCurrentCarePlan,
+} from "../services/careHistoryService.js";
+import {
+  CARE_TIME_ZONE,
+  getLocalDateKey,
+} from "../utils/careSchedule.js";
 
 export const linkPatientByCode = async (req, res, next) => {
   try {
@@ -44,9 +52,18 @@ export const getPatients = async (req, res, next) => {
 
     if (!doctor) return res.status(404).json({ error: "Doctor not found" });
 
+    for (const patient of doctor.linkedPatients || []) {
+      await ensureCurrentCarePlan(patient);
+    }
+
+    // Re-read after midnight rollover so the response contains the current plan.
+    const refreshedDoctor = await User.findById(req.user.id)
+      .populate("linkedPatients", "-password -otp")
+      .populate("pendingPatients", "-password -otp");
+
     res.json({
-      linkedPatients: doctor.linkedPatients || [],
-      pendingPatients: doctor.pendingPatients || [],
+      linkedPatients: refreshedDoctor.linkedPatients || [],
+      pendingPatients: refreshedDoctor.pendingPatients || [],
     });
   } catch (error) {
     next(error);
@@ -79,10 +96,12 @@ export const acceptPatient = async (req, res, next) => {
 
 export const getPatientGames = async (req, res, next) => {
   try {
-    const authorized = await isDoctorLinkedToPatient(req.user.id, req.params.patientId);
-    if (!authorized) return res.status(403).json({ error: "Unauthorized to view this patient's data" });
+    const patient = await getLinkedPatient(req.user.id, req.params.patientId);
+    if (!patient) {
+      return res.status(403).json({ error: "Unauthorized to view this patient's data" });
+    }
 
-    const games = await GameSession.find({ patientId: req.params.patientId }).sort({ playedAt: -1 });
+    const games = await GameSession.find({ patientId: patient._id }).sort({ playedAt: -1 });
     res.json(games);
   } catch (error) {
     next(error);
@@ -92,25 +111,34 @@ export const getPatientGames = async (req, res, next) => {
 export const addMedication = async (req, res, next) => {
   try {
     const { patientId } = req.params;
-    const { name, dosage, time } = req.body;
+    const name = String(req.body.name || "").trim();
+    const dosage = String(req.body.dosage || "").trim();
+    const time = String(req.body.time || "").trim();
 
-    if (!name?.trim()) return res.status(400).json({ error: "Medication name is required" });
+    if (!name) return res.status(400).json({ error: "Medication name is required" });
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
+      return res.status(400).json({ error: "Medication time must use HH:mm format" });
+    }
 
-    const authorized = await isDoctorLinkedToPatient(req.user.id, patientId);
-    if (!authorized) return res.status(403).json({ error: "Not authorized" });
+    const patient = await getLinkedPatient(req.user.id, patientId);
+    if (!patient) {
+      return res.status(403).json({ error: "Not authorized to modify this patient" });
+    }
 
-    const patient = await User.findOne({ _id: patientId, role: "patient" });
-    if (!patient) return res.status(404).json({ error: "Patient not found" });
+    await ensureCurrentCarePlan(patient);
 
     patient.medications.push({
-      name: name.trim(),
-      dosage: dosage || "",
-      time: time || "Morning",
+      name,
+      dosage,
+      time,
       prescribedAt: new Date(),
       taken: false,
     });
 
     await patient.save();
+
+    // The medication remains in the active daily plan. It is copied into
+    // Care History by the midnight rollover, not at prescription time.
     res.status(200).json(patient.medications);
   } catch (error) {
     next(error);
@@ -120,12 +148,8 @@ export const addMedication = async (req, res, next) => {
 export const getDiagnoses = async (req, res, next) => {
   try {
     const { patientId } = req.params;
-    if (!(await isDoctorLinkedToPatient(req.user.id, patientId))) {
-      return res.status(403).json({ error: "Not authorized" });
-    }
-
-    const patient = await User.findById(patientId).select("pastDiagnoses");
-    if (!patient) return res.status(404).json({ error: "Patient not found" });
+    const patient = await getLinkedPatient(req.user.id, patientId);
+    if (!patient) return res.status(403).json({ error: "Not authorized" });
 
     res.status(200).json(patient.pastDiagnoses || []);
   } catch (error) {
@@ -139,12 +163,8 @@ export const addDiagnosis = async (req, res, next) => {
     const { text } = req.body;
 
     if (!text?.trim()) return res.status(400).json({ error: "Note text is required" });
-    if (!(await isDoctorLinkedToPatient(req.user.id, patientId))) {
-      return res.status(403).json({ error: "Not authorized" });
-    }
-
-    const patient = await User.findById(patientId);
-    if (!patient) return res.status(404).json({ error: "Patient not found" });
+    const patient = await getLinkedPatient(req.user.id, patientId);
+    if (!patient) return res.status(403).json({ error: "Not authorized" });
 
     patient.pastDiagnoses.push({ text: text.trim() });
     await patient.save();
@@ -160,12 +180,8 @@ export const updateDiagnosis = async (req, res, next) => {
     const { text } = req.body;
 
     if (!text?.trim()) return res.status(400).json({ error: "Note text is required" });
-    if (!(await isDoctorLinkedToPatient(req.user.id, patientId))) {
-      return res.status(403).json({ error: "Not authorized" });
-    }
-
-    const patient = await User.findById(patientId);
-    if (!patient) return res.status(404).json({ error: "Patient not found" });
+    const patient = await getLinkedPatient(req.user.id, patientId);
+    if (!patient) return res.status(403).json({ error: "Not authorized" });
 
     const note = patient.pastDiagnoses.id(noteId);
     if (!note) return res.status(404).json({ error: "Note not found" });
@@ -181,12 +197,8 @@ export const updateDiagnosis = async (req, res, next) => {
 export const deleteDiagnosis = async (req, res, next) => {
   try {
     const { patientId, noteId } = req.params;
-    if (!(await isDoctorLinkedToPatient(req.user.id, patientId))) {
-      return res.status(403).json({ error: "Not authorized" });
-    }
-
-    const patient = await User.findById(patientId);
-    if (!patient) return res.status(404).json({ error: "Patient not found" });
+    const patient = await getLinkedPatient(req.user.id, patientId);
+    if (!patient) return res.status(403).json({ error: "Not authorized" });
 
     const note = patient.pastDiagnoses.id(noteId);
     if (!note) return res.status(404).json({ error: "Note not found" });
@@ -194,6 +206,154 @@ export const deleteDiagnosis = async (req, res, next) => {
     patient.pastDiagnoses.pull(noteId);
     await patient.save();
     res.status(200).json(patient.pastDiagnoses);
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+export const addReminder = async (req, res, next) => {
+  try {
+    const { patientId } = req.params;
+    const text = String(req.body.text || "").trim();
+    const time = String(req.body.time || "").trim();
+
+    if (!text) return res.status(400).json({ error: "Reminder text is required" });
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
+      return res.status(400).json({ error: "Reminder time must use HH:mm format" });
+    }
+
+    const patient = await getLinkedPatient(req.user.id, patientId);
+    if (!patient) {
+      return res.status(403).json({ error: "Not authorized to modify this patient" });
+    }
+
+    await ensureCurrentCarePlan(patient);
+
+    patient.doctorReminders.push({
+      text,
+      time,
+      checked: false,
+      checkedAt: null,
+    });
+    await patient.save();
+
+    // The reminder remains in the active daily plan. It is copied into
+    // Care History by the midnight rollover, not at creation time.
+    res.status(201).json(patient.doctorReminders);
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+export const getCareNotificationSettings = async (req, res, next) => {
+  try {
+    const doctor = await User.findById(req.user.id).select("careNotificationsEnabled");
+    if (!doctor) return res.status(404).json({ error: "Doctor not found" });
+
+    res.status(200).json({
+      careNotificationsEnabled: doctor.careNotificationsEnabled !== false,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateCareNotificationSettings = async (req, res, next) => {
+  try {
+    const enabled = req.body?.careNotificationsEnabled;
+
+    if (typeof enabled !== "boolean") {
+      return res.status(400).json({
+        error: "careNotificationsEnabled must be a boolean",
+      });
+    }
+
+    const doctor = await User.findByIdAndUpdate(
+      req.user.id,
+      { careNotificationsEnabled: enabled },
+      { new: true, runValidators: true },
+    ).select("careNotificationsEnabled");
+
+    if (!doctor) return res.status(404).json({ error: "Doctor not found" });
+
+    // Turning the feature off also clears currently visible game-missed alerts
+    // so the dashboard reflects the doctor's current preference immediately.
+    if (!enabled) {
+      await CareAlert.updateMany(
+        { doctorId: req.user.id, resolved: false },
+        { $set: { resolved: true, resolvedAt: new Date() } },
+      );
+    }
+
+    res.status(200).json({
+      careNotificationsEnabled: doctor.careNotificationsEnabled !== false,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getCareAlerts = async (req, res, next) => {
+  try {
+    const alerts = await CareAlert.find({
+      doctorId: req.user.id,
+      resolved: false,
+    })
+      .populate("patientId", "name email age condition")
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    res.status(200).json({
+      alerts: alerts.map((alert) => ({
+        _id: alert._id,
+        type: alert.type,
+        message: alert.message,
+        createdAt: alert.createdAt,
+        patient: alert.patientId,
+      })),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+export const getPatientCareHistory = async (req, res, next) => {
+  try {
+    const { patientId } = req.params;
+    const patient = await getLinkedPatient(req.user.id, patientId);
+
+    if (!patient) {
+      return res.status(403).json({ error: "Not authorized to view this patient's history" });
+    }
+
+    await ensureCurrentCarePlan(patient);
+
+    const requestedDate = String(
+      req.query.date || getLocalDateKey(new Date(), CARE_TIME_ZONE),
+    ).trim();
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(requestedDate)) {
+      return res.status(400).json({ error: "Date must use YYYY-MM-DD format" });
+    }
+
+    const history = await CareHistory.find({
+      doctorId: req.user.id,
+      patientId: patient._id,
+      dateKey: requestedDate,
+      archivedAt: { $ne: null },
+    }).sort({ time: 1, prescribedAt: 1 });
+
+    res.status(200).json({
+      date: requestedDate,
+      patient: {
+        _id: patient._id,
+        name: patient.name,
+      },
+      history,
+    });
   } catch (error) {
     next(error);
   }

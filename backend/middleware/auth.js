@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
+import { User } from "../models/User.js";
 
-export const verifyToken = (req, res, next) => {
+export const verifyToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   const token = authHeader?.startsWith("Bearer ")
     ? authHeader.split(" ")[1]
@@ -11,7 +12,22 @@ export const verifyToken = (req, res, next) => {
   }
 
   try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(payload.id).select("role tokenVersion");
+
+    if (!user) {
+      return res.status(401).json({ error: "Account no longer exists." });
+    }
+
+    if ((user.tokenVersion || 0) !== (payload.tokenVersion || 0)) {
+      return res.status(401).json({ error: "Session expired. Please log in again." });
+    }
+
+    req.user = {
+      id: user._id.toString(),
+      role: user.role,
+      tokenVersion: user.tokenVersion || 0,
+    };
     next();
   } catch (_error) {
     return res.status(403).json({ error: "Invalid or expired token." });

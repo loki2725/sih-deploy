@@ -13,19 +13,12 @@ import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
 
-const defaultOrigins = ["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"];
-const configuredOrigins = process.env.CLIENT_URL
-  ? process.env.CLIENT_URL.split(",").map((url) => url.trim().replace(/\/$/, ""))
-  : [];
-const allowedOrigins = [...new Set([...defaultOrigins, ...configuredOrigins])];
+const allowedOrigins = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(",").map((o) => o.trim())
+  : ["http://localhost:5173", "http://localhost:5174"];
 
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    return callback(null, true);
-  },
+  origin: allowedOrigins,
   credentials: true,
 }));
 app.use(express.json());

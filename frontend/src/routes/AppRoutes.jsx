@@ -10,11 +10,15 @@ import {
 import { PatientLayout } from "@/views/layouts/PatientLayout.jsx";
 import { DoctorLayout } from "@/views/layouts/DoctorLayout.jsx";
 import { LoginScreen } from "@/views/pages/auth/Login.jsx";
+import { PasswordReset } from "@/views/pages/auth/PasswordReset.jsx";
+import { AccountSettings } from "@/views/pages/AccountSettings.jsx";
 import { Onboarding } from "@/views/pages/patient/Onboarding.jsx";
 import { GameSelection } from "@/views/pages/patient/GameSelection.jsx";
 import { SequenceGame } from "@/views/pages/patient/games/SequenceGame.jsx";
 import { ColorMemoryGame } from "@/views/pages/patient/games/ColorMemoryGame.jsx";
 import { SoundSequenceGame } from "@/views/pages/patient/games/SoundSequenceGame.jsx";
+import { NumberOrderGame } from "@/views/pages/patient/games/NumberOrderGame.jsx";
+import { OddOneOutGame } from "@/views/pages/patient/games/OddOneOutGame.jsx";
 import { PostGameSummary } from "@/views/pages/patient/games/partials/PostGameSummary.jsx";
 import { PatientHistory } from "@/views/pages/patient/PatientHistory.jsx";
 import { PatientProfile } from "@/views/pages/patient/PatientProfile.jsx";
@@ -32,7 +36,9 @@ function GameFlowController({ game, result, onPlay, onFinish, onReset, navigate 
   if (!game) return <GameSelection onPlay={onPlay} />;
   if (game.key === "sound") return <SoundSequenceGame onBack={onReset} />;
   if (game.key === "color") return <ColorMemoryGame onBack={onReset} />;
-  if (game.key === "sequence" && !result) return <SequenceGame onFinish={onFinish} />;
+  if (game.key === "numberOrder") return <NumberOrderGame onBack={onReset} />;
+  if (game.key === "oddOneOut") return <OddOneOutGame onBack={onReset} />;
+  if (game.key === "sequence" && !result) return <SequenceGame onBack={onReset} onFinish={onFinish} />;
   if (game.key === "sequence") {
     return (
       <PostGameSummary
@@ -67,6 +73,8 @@ export function AppRoutes() {
 
   return (
     <Routes>
+      <Route path="/reset-password" element={<PasswordReset />} />
+
       <Route
         path="/"
         element={
@@ -109,6 +117,7 @@ export function AppRoutes() {
               />
               <Route path="history" element={<PatientHistory />} />
               <Route path="records" element={<PatientRecords />} />
+              <Route path="settings" element={<AccountSettings onLogout={handleLogout} />} />
               <Route path="profile" element={<PatientProfile />} />
               <Route path="safety" element={<SafetyHub />} />
             </Routes>
@@ -145,13 +154,16 @@ export function AppRoutes() {
                   selectedPatient ? (
                     <DoctorPatientDetail patient={selectedPatient} onBack={() => setSelectedPatient(null)} />
                   ) : (
-                    <DoctorDashboard onOpenPatient={setSelectedPatient} onAddPatient={() => setShowAddPatient(true)} />
+                    <DoctorDashboard
+                      patientsOnly
+                      onOpenPatient={setSelectedPatient}
+                    />
                   )
                 }
               />
               <Route path="records" element={<DoctorHealthRecords />} />
               <Route path="appointments" element={<DoctorAppointments />} />
-              <Route path="settings" element={<div className="p-8 font-semibold">Account Settings (Coming Soon)</div>} />
+              <Route path="settings" element={<AccountSettings onLogout={handleLogout} />} />
             </Routes>
             {showAddPatient && (
               <AddPatientModal

@@ -1,3 +1,4 @@
+import { ensureCurrentCarePlan, updateMedicationHistoryStatus, updateReminderHistoryStatus } from "../services/careHistoryService.js";
 import { User } from "../models/User.js";
 
 export const getDoctors = async (_req, res, next) => {
@@ -65,12 +66,60 @@ export const toggleMedicationStatus = async (req, res, next) => {
     const patient = await User.findById(req.user.id);
     if (!patient) return res.status(404).json({ error: "Patient not found" });
 
+    await ensureCurrentCarePlan(patient);
+
     const medication = patient.medications.id(req.params.medId);
     if (!medication) return res.status(404).json({ error: "Medication record not found" });
 
     medication.taken = !medication.taken;
+    medication.lastCheckedAt = new Date();
+    medication.lastTakenAt = medication.taken ? new Date() : null;
+    patient.careItemsLastCheckedAt = new Date();
     await patient.save();
+    await updateMedicationHistoryStatus(medication);
     res.status(200).json(patient.medications);
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+export const checkCareItems = async (req, res, next) => {
+  try {
+    const existingPatient = await User.findOne({ _id: req.user.id, role: "patient" });
+    if (!existingPatient) return res.status(404).json({ error: "Patient not found" });
+    await ensureCurrentCarePlan(existingPatient);
+
+    const patient = await User.findOneAndUpdate(
+      { _id: req.user.id, role: "patient" },
+      { $set: { careItemsLastCheckedAt: new Date() } },
+      { new: true },
+    ).select("careItemsLastCheckedAt");
+
+    if (!patient) return res.status(404).json({ error: "Patient not found" });
+    res.status(200).json({ checkedAt: patient.careItemsLastCheckedAt });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const toggleDoctorReminderStatus = async (req, res, next) => {
+  try {
+    const patient = await User.findOne({ _id: req.user.id, role: "patient" });
+    if (!patient) return res.status(404).json({ error: "Patient not found" });
+
+    await ensureCurrentCarePlan(patient);
+
+    const reminder = patient.doctorReminders.id(req.params.reminderId);
+    if (!reminder) return res.status(404).json({ error: "Reminder not found" });
+
+    reminder.checked = !reminder.checked;
+    reminder.checkedAt = reminder.checked ? new Date() : null;
+    patient.careItemsLastCheckedAt = new Date();
+    await patient.save();
+    await updateReminderHistoryStatus(reminder);
+
+    res.status(200).json(patient.doctorReminders);
   } catch (error) {
     next(error);
   }

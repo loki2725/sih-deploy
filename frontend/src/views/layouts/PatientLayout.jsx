@@ -7,6 +7,7 @@ import {
   LogOut,
   FileText,
   ShieldAlert,
+  Settings,
 } from "lucide-react";
 import { T } from "@/models/constant.js";
 
@@ -17,6 +18,7 @@ export function PatientLayout({ active, setActive, children, onLogout }) {
     { key: "games", icon: Gamepad2, label: "Games" },
     { key: "history", icon: History, label: "History" },
     { key: "records", icon: FileText, label: "Records" },
+    { key: "settings", icon: Settings, label: "Settings" },
   ];
 
   return (
@@ -49,7 +51,7 @@ export function PatientLayout({ active, setActive, children, onLogout }) {
       {/* Desktop/tablet sidebar - hidden below md, where the bottom tab
           bar takes over navigation instead. */}
       <aside
-        className="hidden md:flex w-20 flex-col items-center py-6 gap-8"
+        className="hidden md:flex w-24 flex-col items-center py-6 gap-8"
         style={{ background: T.surface, borderRight: `1px solid ${T.line}` }}
       >
         <div
@@ -77,7 +79,7 @@ export function PatientLayout({ active, setActive, children, onLogout }) {
                   <Icon size={18} color={isActive ? T.primary : T.inkSoft} />
                 </div>
                 <span
-                  className="text-[10px] font-medium"
+                  className="text-xs font-medium leading-tight text-center"
                   style={{ color: isActive ? T.primary : T.inkSoft }}
                 >
                   {n.label}
@@ -118,7 +120,7 @@ export function PatientLayout({ active, setActive, children, onLogout }) {
             >
               <Icon size={22} color={isActive ? T.primary : T.inkSoft} />
               <span
-                className="text-[11px] font-medium"
+                className="text-[13px] font-medium leading-tight text-center"
                 style={{ color: isActive ? T.primary : T.inkSoft }}
               >
                 {n.label}

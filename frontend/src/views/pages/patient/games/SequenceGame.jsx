@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { ChevronLeft } from "lucide-react";
 import { T } from "@/models/constant.js";
 import { API_BASE_URL } from "@/models/apiModel.js";
 
-export function SequenceGame() {
+export function SequenceGame({ onBack }) {
   const navigate = useNavigate();
 
   const [level, setLevel] = useState(1); // Starts at Level 1
@@ -160,6 +161,13 @@ export function SequenceGame() {
 
         <div className="flex gap-4">
           <button
+            onClick={onBack}
+            className="flex-1 py-3 rounded-xl font-medium transition-opacity hover:opacity-80 cursor-pointer"
+            style={{ background: T.line, color: T.ink }}
+          >
+            Back to Games
+          </button>
+          <button
             onClick={handleRestart}
             className="flex-1 py-3 rounded-xl font-medium transition-opacity hover:opacity-80 cursor-pointer"
             style={{ background: T.line, color: T.ink }}
@@ -184,6 +192,15 @@ export function SequenceGame() {
   return (
     <div className="max-w-md mx-auto w-full">
       <div className="flex items-center justify-between mb-6">
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex items-center gap-1 text-sm font-medium cursor-pointer hover:opacity-80 transition-opacity"
+          style={{ color: T.inkSoft }}
+        >
+          <ChevronLeft size={16} />
+          Back to Games
+        </button>
         <span className="text-sm font-medium" style={{ color: T.inkSoft }}>
           Level {level} / 9
         </span>

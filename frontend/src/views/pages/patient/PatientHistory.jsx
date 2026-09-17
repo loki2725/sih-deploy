@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { Activity, Timer, Filter } from "lucide-react";
 import { T } from "@/models/constant.js";
-import { API_BASE_URL } from "@/models/apiModel.js";
 import { Card, Badge } from "@/views/components/common/Primitive.jsx";
 import {
+import { API_BASE_URL } from "@/models/apiModel.js";
   LineChart,
   Line,
   XAxis,
@@ -273,9 +273,9 @@ export function PatientHistory() {
                     <Line
                       type="monotone"
                       dataKey="avgTime"
-                      stroke="#F59E0B"
+                      stroke="#C58B3A"
                       strokeWidth={2.5}
-                      dot={{ r: 3, fill: "#F59E0B" }}
+                      dot={{ r: 3, fill: "#C58B3A" }}
                       activeDot={{ r: 5 }}
                     />
                   </LineChart>

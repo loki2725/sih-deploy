@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ChevronLeft, Volume2 } from "lucide-react";
 import { T } from "@/models/constant.js";
-import { API_BASE_URL } from "@/models/apiModel.js";
 import { Card, Button, Badge } from "@/views/components/common/Primitive.jsx";
+import { API_BASE_URL } from "@/models/apiModel.js";
 
 // ---- SOUND DATA ---------------------------------------------------------
 const SOUND_LIBRARY = [
@@ -602,7 +602,7 @@ export function SoundSequenceGame({ onBack }) {
           <div className="py-4">
             <p
               className="text-center font-medium mb-6"
-              style={{ color: phase === "correct" ? "#10B981" : T.ink }}
+              style={{ color: phase === "correct" ? "#4F7D5A" : T.ink }}
             >
               {phase === "correct"
                 ? `✓ Correct! +${lastPoints} pts`
@@ -618,8 +618,8 @@ export function SoundSequenceGame({ onBack }) {
                     onClick={() => handleSelect(opt, idx)}
                     className="ss-card text-left rounded-xl border p-4 w-full"
                     style={{
-                      background: isSelected ? "#ECFDF5" : T.canvas,
-                      borderColor: isSelected ? "#10B981" : T.line,
+                      background: isSelected ? "#EAF1EA" : T.canvas,
+                      borderColor: isSelected ? "#4F7D5A" : T.line,
                       cursor: phase === "answering" ? "pointer" : "default",
                     }}
                   >
@@ -671,7 +671,7 @@ export function SoundSequenceGame({ onBack }) {
             <div className="text-center mb-6">
               <div
                 className="inline-flex items-center justify-center w-12 h-12 rounded-full mb-3"
-                style={{ background: "#FEE2E2", color: "#EF4444" }}
+                style={{ background: "#F7E8E8", color: "#A94F4F" }}
               >
                 ✕
               </div>

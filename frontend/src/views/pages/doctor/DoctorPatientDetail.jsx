@@ -16,13 +16,18 @@ import {
   X,
   Check,
   ClipboardList,
+  Bell,
+  CalendarDays,
+  ChevronLeft as CalendarChevronLeft,
+  ChevronRight as CalendarChevronRight,
 } from "lucide-react";
 import { T } from "@/models/constant.js";
-import { API_BASE_URL } from "@/models/apiModel.js";
 import { Badge, Card, Button } from "@/views/components/common/Primitive.jsx";
 import { ChatBox } from "@/views/components/common/ChatBox.jsx"; // <-- ADDED CHAT IMPORT
 import { performanceHistory } from "@/models/mockdata.js";
+import { careController } from "@/controllers/careController.js";
 import {
+import { API_BASE_URL } from "@/models/apiModel.js";
   LineChart,
   Line,
   XAxis,
@@ -41,7 +46,8 @@ export function DoctorPatientDetail({ patient, onBack }) {
     "medications",
     "history",
     "messages",
-  ]; // <-- ADDED "messages" TAB
+    "care-history",
+  ];
 
   const [gameHistory, setGameHistory] = useState([]);
   const [loadingGames, setLoadingGames] = useState(true);
@@ -49,8 +55,26 @@ export function DoctorPatientDetail({ patient, onBack }) {
 
   const [medications, setMedications] = useState(patient.medications || []);
   const [medName, setMedName] = useState("");
+  const [medDosage, setMedDosage] = useState("");
   const [medTime, setMedTime] = useState("");
   const [submittingMed, setSubmittingMed] = useState(false);
+  const [doctorReminders, setDoctorReminders] = useState(patient.doctorReminders || []);
+  const [reminderText, setReminderText] = useState("");
+  const [reminderTime, setReminderTime] = useState("");
+  const [submittingReminder, setSubmittingReminder] = useState(false);
+  const [careError, setCareError] = useState("");
+  const [careSuccess, setCareSuccess] = useState("");
+
+  // Prescription / reminder history
+  const [careHistory, setCareHistory] = useState([]);
+  const [loadingCareHistory, setLoadingCareHistory] = useState(false);
+  const [selectedCareDate, setSelectedCareDate] = useState(
+    new Date().toISOString().slice(0, 10),
+  );
+  const [careCalendarMonth, setCareCalendarMonth] = useState(() => {
+    const date = new Date();
+    return new Date(date.getFullYear(), date.getMonth(), 1);
+  });
 
   // Uploaded files
   const [patientFiles, setPatientFiles] = useState([]);
@@ -138,6 +162,65 @@ export function DoctorPatientDetail({ patient, onBack }) {
     fetchPatientFiles();
     fetchDiagnoses();
   }, [patientId]);
+
+  const fetchCareHistory = async (dateKey = selectedCareDate) => {
+    if (!patientId) return;
+    setLoadingCareHistory(true);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/doctor/patients/${patientId}/care-history?date=${dateKey}`,
+        { headers: authHeader() },
+      );
+      if (!response.ok) {
+        throw new Error("Failed to load care history");
+      }
+      const data = await response.json();
+      setCareHistory(data.history || []);
+    } catch (error) {
+      console.error("Failed to fetch care history:", error);
+      setCareHistory([]);
+    } finally {
+      setLoadingCareHistory(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tab === "care-history") {
+      fetchCareHistory(selectedCareDate);
+    }
+  }, [patientId, selectedCareDate, tab]);
+
+  const formatDateKey = (year, month, day) =>
+    `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+  const calendarDays = useMemo(() => {
+    const year = careCalendarMonth.getFullYear();
+    const month = careCalendarMonth.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const cells = [];
+
+    for (let i = 0; i < firstDay; i += 1) cells.push(null);
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      cells.push({
+        day,
+        dateKey: formatDateKey(year, month, day),
+      });
+    }
+
+    return cells;
+  }, [careCalendarMonth]);
+
+  const selectCareDate = (dateKey) => {
+    setSelectedCareDate(dateKey);
+  };
+
+  const handleCareMonthChange = (offset) => {
+    setCareCalendarMonth(
+      (current) =>
+        new Date(current.getFullYear(), current.getMonth() + offset, 1),
+    );
+  };
 
   const handleDownloadFile = async (record) => {
     setDownloadingFileId(record._id);
@@ -254,35 +337,54 @@ export function DoctorPatientDetail({ patient, onBack }) {
     if (!medName.trim()) return;
 
     setSubmittingMed(true);
+    setCareError("");
+    setCareSuccess("");
     try {
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
-      const token = localStorage.getItem("token") || user.token;
+      const updatedMeds = await careController.addMedication(patientId, {
+        name: medName,
+        dosage: medDosage,
+        time: medTime,
+      });
 
-      const response = await fetch(
-        `${API_BASE_URL}/api/doctor/patients/${patientId}/medications`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            name: medName,
-            time: medTime || "Once daily",
-          }),
-        },
-      );
-
-      if (response.ok) {
-        const updatedMeds = await response.json();
+      if (updatedMeds) {
         setMedications(updatedMeds);
         setMedName("");
+        setMedDosage("");
         setMedTime("");
+        setCareSuccess("Medication prescribed successfully.");
       }
     } catch (err) {
       console.error("Failed to add medication:", err);
+      setCareError(err?.message || "Could not prescribe medication.");
     } finally {
       setSubmittingMed(false);
+    }
+  };
+
+  const handleAddReminder = async (e) => {
+    e.preventDefault();
+    if (!reminderText.trim() || !reminderTime) return;
+
+    setSubmittingReminder(true);
+    setCareError("");
+    setCareSuccess("");
+    try {
+      const updatedReminders = await careController.addDoctorReminder(patientId, {
+        text: reminderText,
+        time: reminderTime,
+      });
+
+      if (updatedReminders) {
+        setDoctorReminders(updatedReminders);
+        setReminderText("");
+        setReminderTime("");
+        setCareSuccess("Reminder added for the patient.");
+      }
+    } catch (error) {
+      console.error("Failed to add doctor reminder:", error);
+      setCareError(error?.message || "Could not add reminder.");
+    } finally {
+      setSubmittingReminder(false);
     }
   };
 
@@ -405,7 +507,8 @@ export function DoctorPatientDetail({ patient, onBack }) {
             }}
           >
             {t === "messages" && <MessageSquare size={14} />}
-            {t}
+            {t === "care-history" && <CalendarDays size={14} />}
+            {t === "care-history" ? "Care History" : t}
           </button>
         ))}
       </div>
@@ -535,9 +638,9 @@ export function DoctorPatientDetail({ patient, onBack }) {
                   <Line
                     type="monotone"
                     dataKey="avgTime"
-                    stroke="#F59E0B"
+                    stroke="#C58B3A"
                     strokeWidth={2.5}
-                    dot={{ r: 3, fill: "#F59E0B" }}
+                    dot={{ r: 3, fill: "#C58B3A" }}
                     activeDot={{ r: 5 }}
                   />
                 </LineChart>
@@ -808,9 +911,22 @@ export function DoctorPatientDetail({ patient, onBack }) {
               />
               <input
                 type="text"
-                placeholder="Dosage / Schedule (e.g. 10mg - Morning)"
+                placeholder="Dosage (e.g. 10mg)"
+                value={medDosage}
+                onChange={(e) => setMedDosage(e.target.value)}
+                className="p-2.5 rounded-xl text-sm flex-1 outline-none"
+                style={{
+                  border: `1px solid ${T.line}`,
+                  background: T.surface,
+                  color: T.ink,
+                }}
+              />
+              <input
+                type="time"
+                aria-label="Medication time"
                 value={medTime}
                 onChange={(e) => setMedTime(e.target.value)}
+                required
                 className="p-2.5 rounded-xl text-sm flex-1 outline-none"
                 style={{
                   border: `1px solid ${T.line}`,
@@ -826,6 +942,66 @@ export function DoctorPatientDetail({ patient, onBack }) {
                 <Plus size={16} /> {submittingMed ? "Adding..." : "Prescribe"}
               </Button>
             </form>
+          </Card>
+
+          <Card>
+            <div className="font-semibold mb-3 flex items-center gap-2" style={{ color: T.ink }}>
+              <Bell size={16} /> Add Doctor Reminder
+            </div>
+            <form onSubmit={handleAddReminder} className="flex flex-col sm:flex-row gap-3">
+              <input
+                type="text"
+                placeholder="Reminder (e.g. Take a short walk)"
+                value={reminderText}
+                onChange={(e) => setReminderText(e.target.value)}
+                required
+                className="p-2.5 rounded-xl text-sm flex-1 outline-none"
+                style={{ border: `1px solid ${T.line}`, background: T.surface, color: T.ink }}
+              />
+              <input
+                type="time"
+                aria-label="Reminder time"
+                value={reminderTime}
+                onChange={(e) => setReminderTime(e.target.value)}
+                required
+                className="p-2.5 rounded-xl text-sm outline-none"
+                style={{ border: `1px solid ${T.line}`, background: T.surface, color: T.ink }}
+              />
+              <Button type="submit" disabled={submittingReminder || !reminderText.trim() || !reminderTime} className="flex items-center justify-center gap-1">
+                <Plus size={16} /> {submittingReminder ? "Adding..." : "Add Reminder"}
+              </Button>
+            </form>
+          </Card>
+
+          <Card>
+            <div className="font-semibold mb-3" style={{ color: T.ink }}>
+              Doctor Reminders
+            </div>
+            {doctorReminders.length === 0 ? (
+              <div className="text-sm py-3" style={{ color: T.inkSoft }}>
+                No reminders added yet.
+              </div>
+            ) : (
+              doctorReminders.map((reminder, i) => (
+                <div
+                  key={reminder._id || i}
+                  className="flex items-start justify-between gap-3 py-2.5"
+                  style={{ borderTop: i > 0 ? `1px solid ${T.line}` : "none" }}
+                >
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium break-words" style={{ color: T.ink }}>
+                      {reminder.text}
+                    </div>
+                    <div className="text-xs mt-1" style={{ color: T.inkSoft }}>
+                      {reminder.time} · reminder email after 10 minutes if unchecked
+                    </div>
+                  </div>
+                  <Badge tone={reminder.checked ? "mint" : "amber"}>
+                    {reminder.checked ? "Checked ✓" : "Pending"}
+                  </Badge>
+                </div>
+              ))
+            )}
           </Card>
 
           <Card>
@@ -850,7 +1026,7 @@ export function DoctorPatientDetail({ patient, onBack }) {
                     className="text-sm font-medium"
                     style={{ color: T.ink }}
                   >
-                    {m.name}{" "}
+                    {m.name}{m.dosage ? ` (${m.dosage})` : ""}{" "}
                     <span style={{ color: T.inkSoft }}>• {m.time}</span>
                   </span>
                   <Badge tone={m.taken ? "mint" : "amber"}>
@@ -922,6 +1098,174 @@ export function DoctorPatientDetail({ patient, onBack }) {
             })
           )}
         </Card>
+      )}
+
+      {tab === "care-history" && (
+        <div className="flex flex-col gap-5">
+          <Card>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+              <div>
+                <div className="font-semibold flex items-center gap-2" style={{ color: T.ink }}>
+                  <CalendarDays size={18} color={T.primary} />
+                  Care History
+                </div>
+                <p className="text-xs mt-1" style={{ color: T.inkSoft }}>
+                  Select a date to review medications and reminders prescribed for {patient.name}.
+                </p>
+              </div>
+              <div
+                className="text-sm font-semibold px-3 py-2 rounded-xl"
+                style={{ background: T.primarySoft, color: T.primary }}
+              >
+                {selectedCareDate}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between mb-3">
+              <button
+                type="button"
+                onClick={() => handleCareMonthChange(-1)}
+                className="p-2 rounded-lg cursor-pointer"
+                style={{ color: T.inkSoft, background: T.canvas }}
+                aria-label="Previous month"
+              >
+                <CalendarChevronLeft size={18} />
+              </button>
+
+              <div className="font-semibold text-sm" style={{ color: T.ink }}>
+                {careCalendarMonth.toLocaleDateString(undefined, {
+                  month: "long",
+                  year: "numeric",
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleCareMonthChange(1)}
+                className="p-2 rounded-lg cursor-pointer"
+                style={{ color: T.inkSoft, background: T.canvas }}
+                aria-label="Next month"
+              >
+                <CalendarChevronRight size={18} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-7 gap-1 text-center text-xs mb-1">
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                <div key={day} className="py-2 font-semibold" style={{ color: T.inkSoft }}>
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-7 gap-1">
+              {calendarDays.map((cell, index) =>
+                cell ? (
+                  <button
+                    key={cell.dateKey}
+                    type="button"
+                    onClick={() => selectCareDate(cell.dateKey)}
+                    className="h-10 rounded-lg text-sm font-semibold cursor-pointer transition-all"
+                    style={{
+                      background:
+                        selectedCareDate === cell.dateKey
+                          ? T.primary
+                          : T.canvas,
+                      color:
+                        selectedCareDate === cell.dateKey
+                          ? T.surface
+                          : T.ink,
+                      border:
+                        selectedCareDate === cell.dateKey
+                          ? `1px solid ${T.primary}`
+                          : `1px solid ${T.line}`,
+                    }}
+                  >
+                    {cell.day}
+                  </button>
+                ) : (
+                  <div key={`blank-${index}`} className="h-10" />
+                ),
+              )}
+            </div>
+          </Card>
+
+          <Card>
+            <div className="font-semibold mb-3" style={{ color: T.ink }}>
+              Prescriptions & Tasks — {selectedCareDate}
+            </div>
+
+            {loadingCareHistory ? (
+              <div className="py-6 text-center text-sm" style={{ color: T.inkSoft }}>
+                Loading care history...
+              </div>
+            ) : careHistory.length === 0 ? (
+              <div className="py-6 text-center text-sm" style={{ color: T.inkSoft }}>
+                No medications or reminders were prescribed for this date.
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {careHistory.map((item) => {
+                  const isMedication = item.type === "medication";
+                  return (
+                    <div
+                      key={item._id}
+                      className="rounded-xl p-4 flex items-center justify-between gap-3"
+                      style={{ background: T.canvas, border: `1px solid ${T.line}` }}
+                    >
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div
+                          className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                          style={{ background: T.primarySoft }}
+                        >
+                          {isMedication ? (
+                            <Pill size={16} color={T.primary} />
+                          ) : (
+                            <Bell size={16} color={T.primary} />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold break-words" style={{ color: T.ink }}>
+                            {isMedication ? item.name : item.text || item.name}
+                          </div>
+                          <div className="text-xs mt-1" style={{ color: T.inkSoft }}>
+                            {isMedication
+                              ? `${item.dosage || "Dosage not specified"} · Scheduled ${item.time}`
+                              : `Reminder · Scheduled ${item.time}`}
+                          </div>
+                          <div className="text-[11px] mt-1" style={{ color: T.inkSoft }}>
+                            Prescribed {new Date(item.prescribedAt).toLocaleString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </div>
+                        </div>
+                      </div>
+
+                      <Badge
+                        tone={
+                          item.status === "completed"
+                            ? "mint"
+                            : item.status === "missed"
+                              ? "amber"
+                              : "primary"
+                        }
+                      >
+                        {item.status === "completed"
+                          ? "Completed"
+                          : item.status === "missed"
+                            ? "Missed"
+                            : "Pending"}
+                      </Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+        </div>
       )}
 
       {/* CHAT TAB INTEGRATION */}

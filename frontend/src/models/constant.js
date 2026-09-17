@@ -1,18 +1,20 @@
+// NeuroNest Design System
+// Keep product-wide semantic colors here so patient and doctor experiences stay consistent.
 export const T = {
-  primary: "#6C4FE0",
-  primaryDark: "#5940C4",
-  primarySoft: "#EFEAFB",
-  mint: "#2FBF8F",
-  mintSoft: "#E3F8F0",
-  amber: "#F0A83B",
-  amberSoft: "#FCEFD9",
-  red: "#E0554F",
-  redSoft: "#FBEAE9",
-  ink: "#1F2033",
-  inkSoft: "#6B6C80",
-  line: "#E7E5F3",
+  primary: "#3F6F68",
+  primaryDark: "#345E58",
+  primarySoft: "#E7F0EE",
+  mint: "#4F7D5A",
+  mintSoft: "#EAF1EA",
+  amber: "#C58B3A",
+  amberSoft: "#F8EEDC",
+  red: "#A94F4F",
+  redSoft: "#F7E8E8",
+  ink: "#263238",
+  inkSoft: "#546E7A",
+  line: "#DCE3E0",
   surface: "#FFFFFF",
-  canvas: "#F6F4FD",
+  canvas: "#F7F5EF",
 };
 
 export const R = { card: "16px", control: "10px" };

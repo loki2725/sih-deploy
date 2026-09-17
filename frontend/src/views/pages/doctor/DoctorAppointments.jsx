@@ -9,8 +9,8 @@ import {
   X,
 } from "lucide-react";
 import { T } from "@/models/constant.js";
-import { API_BASE_URL } from "@/models/apiModel.js";
 import { Card, Badge, Button } from "@/views/components/common/Primitive.jsx";
+import { API_BASE_URL } from "@/models/apiModel.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

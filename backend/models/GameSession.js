@@ -9,4 +9,6 @@ const gameSessionSchema = new mongoose.Schema({
   playedAt: { type: Date, default: Date.now },
 });
 
+gameSessionSchema.index({ patientId: 1, playedAt: -1 });
+
 export const GameSession = mongoose.model("GameSession", gameSessionSchema);

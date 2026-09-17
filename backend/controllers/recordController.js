@@ -3,6 +3,7 @@ import path from "path";
 import { MedicalRecord } from "../models/MedicalRecord.js";
 import { User } from "../models/User.js";
 import cloudinary from "../config/cloudinary.js";
+import { getLinkedPatient } from "../utils/authorization.js";
 
 const removeTempFile = (tempPath) => {
   if (tempPath && fs.existsSync(tempPath)) {
@@ -52,16 +53,13 @@ export const getMyRecords = async (req, res, next) => {
 
 export const getPatientRecords = async (req, res, next) => {
   try {
-    const doctor = await User.findById(req.user.id).select("linkedPatients");
-    const isAuthorized = (doctor?.linkedPatients || []).some(
-      (id) => id.toString() === req.params.patientId,
-    );
+    const patient = await getLinkedPatient(req.user.id, req.params.patientId);
 
-    if (!isAuthorized) {
+    if (!patient) {
       return res.status(403).json({ error: "You are not authorized to view this patient's records." });
     }
 
-    const records = await MedicalRecord.find({ patientId: req.params.patientId }).sort({ uploadedAt: -1 });
+    const records = await MedicalRecord.find({ patientId: patient._id }).sort({ uploadedAt: -1 });
     res.status(200).json(records);
   } catch (error) {
     next(error);

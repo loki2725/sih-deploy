@@ -6,6 +6,8 @@ import {
   getEmergencyDetails,
   updateEmergencyDetails,
   toggleMedicationStatus,
+  checkCareItems,
+  toggleDoctorReminderStatus,
 } from "../controllers/patientController.js";
 
 const router = express.Router();
@@ -16,5 +18,7 @@ router.post("/request-doctor", requestDoctor);
 router.get("/emergency-details", getEmergencyDetails);
 router.patch("/emergency-details", updateEmergencyDetails);
 router.patch("/medications/:medId/status", toggleMedicationStatus);
+router.post("/care-items/check", checkCareItems);
+router.patch("/reminders/:reminderId/status", toggleDoctorReminderStatus);
 
 export default router;
