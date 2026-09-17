@@ -14,10 +14,9 @@ export const getLinkedPatient = async (doctorId, patientId) => {
 
   const doctor = await User.findById(doctorId)
     .select("linkedPatients")
-    .populate("linkedPatients", "-password -otp");
+    .populate("linkedPatients", "-password -otp -passwordResetOtp -passwordResetOtpExpiresAt -passwordResetLastSentAt -passwordResetAttempts");
 
   if (!doctor) return null;
-
   const linkedPatients = doctor.linkedPatients || [];
 
   const exactPatient = linkedPatients.find(
@@ -30,16 +29,9 @@ export const getLinkedPatient = async (doctorId, patientId) => {
     ? rawId.slice(3)
     : rawId;
 
-  if (!/^[0-9A-F]{6,}$/.test(connectionCode)) return null;
-
-  const prefix = connectionCode.slice(0, 6).toUpperCase();
-
-  return (
-    linkedPatients.find(
-      (patient) =>
-        patient?._id?.toString().slice(0, 6).toUpperCase() === prefix,
-    ) || null
-  );
+  return linkedPatients.find(
+    (patient) => patient?.patientConnectionCode === connectionCode,
+  ) || null;
 };
 
 export const isDoctorLinkedToPatient = async (doctorId, patientId) => {

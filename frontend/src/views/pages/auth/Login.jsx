@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Brain, Activity } from "lucide-react";
 import { T } from "@/models/constant.js";
+import { API_BASE_URL } from "@/models/apiModel.js";
 import { Button, Card } from "@/views/components/common/Primitive.jsx";
 
 export function LoginScreen() {
@@ -23,6 +24,10 @@ export function LoginScreen() {
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
   const [otpMessage, setOtpMessage] = useState(null);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [slowMessageVisible, setSlowMessageVisible] = useState(false);
+  const [slowOperation, setSlowOperation] = useState(null);
+  const slowMessageTimerRef = useRef(null);
+  const slowMessageHideTimerRef = useRef(null);
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -32,6 +37,30 @@ export function LoginScreen() {
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
+  // If account creation or OTP delivery takes longer than 5 seconds,
+  // show a short reassurance message. Hide it after 3 seconds, or
+  // immediately when the operation finishes.
+  useEffect(() => {
+    if (!loading || !slowOperation) {
+      if (slowMessageTimerRef.current) clearTimeout(slowMessageTimerRef.current);
+      if (slowMessageHideTimerRef.current) clearTimeout(slowMessageHideTimerRef.current);
+      setSlowMessageVisible(false);
+      return;
+    }
+
+    slowMessageTimerRef.current = setTimeout(() => {
+      setSlowMessageVisible(true);
+      slowMessageHideTimerRef.current = setTimeout(() => {
+        setSlowMessageVisible(false);
+      }, 3000);
+    }, 5000);
+
+    return () => {
+      if (slowMessageTimerRef.current) clearTimeout(slowMessageTimerRef.current);
+      if (slowMessageHideTimerRef.current) clearTimeout(slowMessageHideTimerRef.current);
+    };
+  }, [loading, slowOperation]);
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -39,11 +68,12 @@ export function LoginScreen() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setSlowOperation(isRegistering ? "account" : null);
     setError(null);
 
     const endpoint = isRegistering
-      ? "http://localhost:5001/api/auth/register"
-      : "http://localhost:5001/api/auth/login";
+      ? `${API_BASE_URL}/api/auth/register`
+      : `${API_BASE_URL}/api/auth/login`;
 
     const payload = isRegistering
       ? { ...formData, role: selectedRole }
@@ -75,7 +105,7 @@ export function LoginScreen() {
       if (isRegistering) {
         // Registered -> don't log in yet, show the OTP screen
         setPendingVerification(true);
-        setOtpMessage(`We sent a 6-digit code to ${formData.email}. Enter it below to verify your account.`);
+        setOtpMessage(`Your 6-digit code is being sent to ${formData.email}. Enter it below once it arrives.`);
         return;
       }
 
@@ -92,6 +122,7 @@ export function LoginScreen() {
       setError(err.message);
     } finally {
       setLoading(false);
+      setSlowOperation(null);
     }
   };
 
@@ -131,10 +162,11 @@ export function LoginScreen() {
     }
 
     setLoading(true);
+    setSlowOperation(null);
     setError(null);
 
     try {
-      const response = await fetch("http://localhost:5001/api/auth/verify-otp", {
+      const response = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: formData.email, otp }),
@@ -164,8 +196,9 @@ export function LoginScreen() {
     setError(null);
     setOtpMessage(null);
     setLoading(true);
+    setSlowOperation("otp");
     try {
-      const response = await fetch("http://localhost:5001/api/auth/resend-otp", {
+      const response = await fetch(`${API_BASE_URL}/api/auth/resend-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: formData.email }),
@@ -175,12 +208,13 @@ export function LoginScreen() {
         throw new Error(data.error || "Could not resend code");
       }
       setOtpDigits(["", "", "", "", "", ""]);
-      setOtpMessage("A new code has been sent to your email.");
+      setOtpMessage("A new code is being sent to your email.");
       setResendCooldown(30);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
+      setSlowOperation(null);
     }
   };
 
@@ -282,6 +316,19 @@ export function LoginScreen() {
                     />
                   ))}
                 </div>
+
+                {slowMessageVisible && (
+                  <div
+                    className="p-3 rounded-xl text-sm text-center transition-opacity duration-300"
+                    style={{
+                      background: T.primarySoft,
+                      border: `1px solid ${T.line}`,
+                      color: T.inkSoft,
+                    }}
+                  >
+                    This might take a while. Sorry for the inconvenience.
+                  </div>
+                )}
 
                 <Button
                   type="submit"
@@ -508,6 +555,19 @@ export function LoginScreen() {
                     }}
                   />
                 </div>
+
+                {slowMessageVisible && (
+                  <div
+                    className="p-3 rounded-xl text-sm text-center transition-opacity duration-300"
+                    style={{
+                      background: T.primarySoft,
+                      border: `1px solid ${T.line}`,
+                      color: T.inkSoft,
+                    }}
+                  >
+                    This might take a while. Sorry for the inconvenience.
+                  </div>
+                )}
 
                 <Button
                   type="submit"

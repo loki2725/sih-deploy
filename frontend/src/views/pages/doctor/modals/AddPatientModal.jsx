@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/models/apiModel.js";
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { T } from "@/models/constant.js";
@@ -15,10 +16,10 @@ export function AddPatientModal({ onClose, onConnected }) {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       const token = localStorage.getItem("token") || user.token;
 
-      const response = await fetch("http://localhost:5001/api/doctor/link", {
+      const response = await fetch(`${API_BASE_URL}/api/doctor/link`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/json`,
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ code }),
@@ -56,7 +57,7 @@ export function AddPatientModal({ onClose, onConnected }) {
           <>
             <Field
               label="Connection code"
-              placeholder="MC-XXXX-XX"
+              placeholder="MC-XXXXXXXX"
               value={code}
               onChange={(e) => setCode(e.target.value)}
             />

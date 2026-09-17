@@ -5,9 +5,12 @@ import { sendOtpEmail, sendPasswordResetEmail } from "../utils/sendEmail.js";
 import { signToken } from "../utils/jwt.js";
 import { isSameLocalDay, CARE_TIME_ZONE } from "../utils/careSchedule.js";
 import { ensureCurrentCarePlan } from "../services/careHistoryService.js";
+import { generatePatientConnectionCode } from "../utils/connectionCode.js";
 
 const OTP_EXPIRY_MINUTES = 10;
 const MIN_PASSWORD_LENGTH = 8;
+const MAX_OTP_ATTEMPTS = 5;
+const OTP_RESEND_COOLDOWN_MS = 30 * 1000;
 
 export const register = async (req, res, next) => {
   try {
@@ -18,6 +21,8 @@ export const register = async (req, res, next) => {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+    const normalizedRole = role === "doctor" ? "doctor" : "patient";
+
     const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return res.status(400).json({ error: "Email is already registered" });
@@ -27,34 +32,58 @@ export const register = async (req, res, next) => {
     const otp = generateOtp();
     const hashedOtp = await bcrypt.hash(otp, 10);
 
+    let patientConnectionCode = null;
+    if (normalizedRole === "patient") {
+      for (let i = 0; i < 5; i += 1) {
+        const candidate = generatePatientConnectionCode();
+        if (!(await User.exists({ patientConnectionCode: candidate }))) {
+          patientConnectionCode = candidate;
+          break;
+        }
+      }
+      if (!patientConnectionCode) return res.status(503).json({ error: "Could not create a unique connection code. Please try again." });
+    }
+
     const newUser = new User({
       name: name.trim(),
       email: normalizedEmail,
       password: hashedPassword,
-      role: role || "patient",
+      role: normalizedRole,
       age: age ? Number(age) : null,
       condition: condition || "None listed",
       risk: risk || "mint",
+      patientConnectionCode,
       isVerified: false,
       otp: hashedOtp,
+      otpAttempts: 0,
+      otpLastSentAt: new Date(),
       otpExpiresAt: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000),
     });
 
     const savedUser = await newUser.save();
 
-    try {
-      await sendOtpEmail(savedUser.email, otp, savedUser.name);
-    } catch (mailError) {
+    // Do not make the signup request wait for the external SMTP server.
+    // The account + OTP are already safely stored in MongoDB, so the user can
+    // move to the verification screen immediately while the email is sent in
+    // the background. This removes SMTP latency from the signup UX.
+    sendOtpEmail(savedUser.email, otp, savedUser.name).catch(async (mailError) => {
       console.error("Failed to send OTP email:", mailError.message);
-      await User.findByIdAndDelete(savedUser._id);
-
-      return res.status(502).json({
-        error: "Could not send verification email. Please try registering again.",
-      });
-    }
+      // Remove the account only if email delivery fails before verification.
+      // If the user has already verified meanwhile, keep the account.
+      try {
+        const pendingUser = await User.findOne({ _id: savedUser._id, isVerified: false });
+        if (pendingUser) {
+          pendingUser.otp = null;
+          pendingUser.otpExpiresAt = null;
+          await pendingUser.save();
+        }
+      } catch (cleanupError) {
+        console.error("Failed to clear OTP after email failure:", cleanupError.message);
+      }
+    });
 
     res.status(201).json({
-      message: "Registered successfully. Please check your email for the OTP to verify your account.",
+      message: "Account created. Your verification code is being sent to your email.",
       email: savedUser.email,
     });
   } catch (error) {
@@ -80,12 +109,30 @@ export const verifyOtp = async (req, res, next) => {
       return res.status(400).json({ error: "OTP has expired. Please request a new one." });
     }
 
+    if ((user.otpAttempts || 0) >= MAX_OTP_ATTEMPTS) {
+      return res.status(429).json({ error: "Too many incorrect OTP attempts. Please request a new code." });
+    }
+
     const isMatch = await bcrypt.compare(otp, user.otp);
-    if (!isMatch) return res.status(400).json({ error: "Invalid OTP" });
+    if (!isMatch) {
+      user.otpAttempts = (user.otpAttempts || 0) + 1;
+      if (user.otpAttempts >= MAX_OTP_ATTEMPTS) {
+        user.otp = null;
+        user.otpExpiresAt = null;
+        user.otpAttempts = 0;
+        user.otpLastSentAt = null;
+        await user.save();
+        return res.status(429).json({ error: "Too many incorrect OTP attempts. Please request a new code." });
+      }
+      await user.save();
+      return res.status(400).json({ error: "Invalid OTP" });
+    }
 
     user.isVerified = true;
     user.otp = null;
     user.otpExpiresAt = null;
+    user.otpAttempts = 0;
+    user.otpLastSentAt = null;
     await user.save();
 
     res.status(200).json({
@@ -112,13 +159,24 @@ export const resendOtp = async (req, res, next) => {
     if (!user) return res.status(404).json({ error: "User not found" });
     if (user.isVerified) return res.status(400).json({ error: "Account is already verified" });
 
+    if (user.otpLastSentAt && Date.now() - user.otpLastSentAt.getTime() < OTP_RESEND_COOLDOWN_MS) {
+      return res.status(429).json({ error: "Please wait before requesting another verification code." });
+    }
+
     const otp = generateOtp();
     user.otp = await bcrypt.hash(otp, 10);
     user.otpExpiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
+    user.otpAttempts = 0;
+    user.otpLastSentAt = new Date();
     await user.save();
 
-    await sendOtpEmail(user.email, otp, user.name);
-    res.status(200).json({ message: "A new OTP has been sent to your email." });
+    // Do not block the HTTP response on SMTP. The new OTP is already stored;
+    // the email is dispatched in the background.
+    sendOtpEmail(user.email, otp, user.name).catch((mailError) => {
+      console.error("Failed to resend OTP email:", mailError.message);
+    });
+
+    res.status(200).json({ message: "A new OTP is being sent to your email." });
   } catch (error) {
     next(error);
   }
@@ -162,13 +220,23 @@ export const login = async (req, res, next) => {
 export const getMe = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id)
-      .select("-password -otp")
+      .select("-password -otp -passwordResetOtp -passwordResetOtpExpiresAt -passwordResetLastSentAt -passwordResetAttempts")
       .populate("linkedDoctor", "name email");
 
     if (!user) return res.status(404).json({ error: "User not found" });
 
     if (user.role === "patient") {
       await ensureCurrentCarePlan(user);
+      if (!user.patientConnectionCode) {
+        let code;
+        for (let i = 0; i < 5; i += 1) {
+          code = generatePatientConnectionCode();
+          const exists = await User.exists({ patientConnectionCode: code });
+          if (!exists) break;
+        }
+        user.patientConnectionCode = code;
+        await user.save();
+      }
     }
 
     const payload = user.toObject();

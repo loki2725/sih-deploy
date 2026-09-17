@@ -16,8 +16,8 @@ const sosSchema = new mongoose.Schema(
     patientId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
     doctorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null, index: true },
     location: {
-      latitude: { type: Number, required: true, min: -90, max: 90 },
-      longitude: { type: Number, required: true, min: -180, max: 180 },
+      latitude: { type: Number, required: false, default: null, min: -90, max: 90 },
+      longitude: { type: Number, required: false, default: null, min: -180, max: 180 },
       accuracy: { type: Number, default: null, min: 0 },
     },
     triggeredAt: { type: Date, default: Date.now, index: true },
@@ -31,6 +31,8 @@ const sosSchema = new mongoose.Schema(
 
     // Every successful location access is auditable and is emailed to the patient.
     viewers: { type: [sosViewerSchema], default: [] },
+    locationExpiresAt: { type: Date, default: null, index: true },
+    locationRedactedAt: { type: Date, default: null },
   },
   { timestamps: true },
 );

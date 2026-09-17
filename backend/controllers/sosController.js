@@ -59,6 +59,7 @@ export const triggerSos = async (req, res, next) => {
       triggeredAt,
       doctorOtpHash,
       doctorOtpExpiresAt: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000),
+      locationExpiresAt: new Date(triggeredAt.getTime() + 7 * 24 * 60 * 60 * 1000),
     });
 
     const recipients = [patient.email, doctor?.email].filter(Boolean);
@@ -225,6 +226,7 @@ export const verifyDoctorSosOtp = async (req, res, next) => {
       viewedAt,
     });
     sos.doctorOtpExpiresAt = viewedAt;
+    sos.locationExpiresAt = new Date(viewedAt.getTime() + 7 * 24 * 60 * 60 * 1000);
     sos.status = "resolved";
     await sos.save();
 

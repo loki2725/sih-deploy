@@ -19,7 +19,7 @@ import {
   sendDoctorMissedCareItemEmail,
 } from "../utils/sendEmail.js";
 
-const schedulerState = { running: false, interval: null, inProgress: false };
+const schedulerState = { inProgress: false };
 const TEN_MINUTES_MS = 10 * 60 * 1000;
 
 const hasGameToday = async (patientId, now) => {
@@ -402,17 +402,6 @@ export const runCareReminderCheck = async (now = new Date()) => {
   }
 };
 
-export const startCareReminderScheduler = () => {
-  if (schedulerState.running) return;
-  schedulerState.running = true;
-
-  runCareReminderCheck().catch((error) =>
-    console.error("Initial care reminder check failed:", error.message),
-  );
-
-  schedulerState.interval = setInterval(() => {
-    runCareReminderCheck().catch((error) =>
-      console.error("Care reminder check failed:", error.message),
-    );
-  }, 60 * 1000);
-};
+// Kept as a compatibility export. Scheduling is now owned by the persistent
+// job worker in careJobQueue.js so restarts do not silently skip the minute loop.
+export const startCareReminderScheduler = () => {};

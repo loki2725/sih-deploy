@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/models/apiModel.js";
 import { useState, useEffect } from "react";
 import {
   HeartPulse,
@@ -39,10 +40,10 @@ export function DoctorHealthRecords() {
     const fetchAll = async () => {
       try {
         const patientsRes = await fetch(
-          "http://localhost:5001/api/doctor/patients",
+          `${API_BASE_URL}/api/doctor/patients`,
           { headers: authHeader() },
         );
-        if (!patientsRes.ok) throw new Error("Failed to load patients");
+        if (!patientsRes.ok) throw new Error("Failed to load patients`);
         const data = await patientsRes.json();
         const linked = data.linkedPatients || data || [];
         setPatients(linked);
@@ -53,7 +54,7 @@ export function DoctorHealthRecords() {
             const id = p._id || p.id;
             try {
               const res = await fetch(
-                `http://localhost:5001/api/records/patient/${id}`,
+                `${API_BASE_URL}/api/records/patient/${id}`,
                 { headers: authHeader() },
               );
               return [id, res.ok ? await res.json() : []];
@@ -77,7 +78,7 @@ export function DoctorHealthRecords() {
     setDownloadingId(record._id);
     try {
       const res = await fetch(
-        `http://localhost:5001/api/records/${record._id}/download`,
+        `${API_BASE_URL}/api/records/${record._id}/download`,
         { headers: authHeader() },
       );
       if (!res.ok) throw new Error("Download failed");

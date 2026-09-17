@@ -18,6 +18,11 @@ export const requestDoctor = async (req, res, next) => {
     const doctor = await User.findOne({ _id: doctorId, role: "doctor" });
     if (!doctor) return res.status(404).json({ error: "Doctor not found" });
 
+    const patient = await User.findById(req.user.id).select("linkedDoctor requestedDoctor");
+    if (patient?.linkedDoctor) {
+      return res.status(409).json({ error: "You are already connected to a doctor." });
+    }
+
     await User.findByIdAndUpdate(req.user.id, { requestedDoctor: doctorId });
     await User.findByIdAndUpdate(doctorId, { $addToSet: { pendingPatients: req.user.id } });
 

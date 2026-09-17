@@ -1,6 +1,7 @@
+import { API_BASE_URL } from "@/models/apiModel.js";
 import { useState, useEffect, useRef } from "react";
 import { Send } from "lucide-react";
-import { io } from "socket.io-client";
+import { createSocket } from "@/services/socketClient.js";
 import { T } from "@/models/constant.js";
 import { Card, Button } from "./Primitive";
 
@@ -15,12 +16,11 @@ export function ChatBox({ recipientId, recipientName }) {
 
   const userStr = localStorage.getItem("user");
   const user = userStr ? JSON.parse(userStr) : {};
-  const currentUserId = user._id || user.id;
   const token = localStorage.getItem("token") || user.token;
 
   // 1. Initialize and clean up socket connection
   useEffect(() => {
-    const newSocket = io("http://localhost:5001");
+    const newSocket = createSocket({ auth: { token } });
     setSocket(newSocket);
 
     return () => {
@@ -33,11 +33,11 @@ export function ChatBox({ recipientId, recipientName }) {
     const initChat = async () => {
       try {
         const response = await fetch(
-          "http://localhost:5001/api/chat/conversation",
+          `${API_BASE_URL}/api/chat/conversation`,
           {
             method: "POST",
             headers: {
-              "Content-Type": "application/json",
+              "Content-Type": "application/json`,
               Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({ participantId: recipientId }),
@@ -53,7 +53,7 @@ export function ChatBox({ recipientId, recipientName }) {
           }
 
           const msgRes = await fetch(
-            `http://localhost:5001/api/chat/${conv._id}/messages`,
+            `${API_BASE_URL}/api/chat/${conv._id}/messages`,
             {
               headers: { Authorization: `Bearer ${token}` },
             },
@@ -103,7 +103,6 @@ export function ChatBox({ recipientId, recipientName }) {
 
     const messageData = {
       conversationId,
-      sender: currentUserId,
       text: text.trim(),
     };
 

@@ -7,6 +7,12 @@ dotenv.config();
 // "App Password" - NOT your normal Gmail password) set in backend/.env
 const transporter = nodemailer.createTransport({
   service: "gmail",
+  pool: true,
+  maxConnections: 3,
+  maxMessages: 50,
+  connectionTimeout: Number(process.env.EMAIL_CONNECTION_TIMEOUT_MS || 10000),
+  greetingTimeout: Number(process.env.EMAIL_GREETING_TIMEOUT_MS || 10000),
+  socketTimeout: Number(process.env.EMAIL_SOCKET_TIMEOUT_MS || 15000),
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,

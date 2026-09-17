@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/models/apiModel.js";
 import { useState, useEffect } from "react";
 import { ShieldAlert, Pencil, X, Check, Loader2 } from "lucide-react";
 import { T } from "@/models/constant.js";
@@ -69,11 +70,11 @@ export function EmergencyDetailsCard({ details, onSaved }) {
       const token = localStorage.getItem("token") || user.token;
 
       const res = await fetch(
-        "http://localhost:5001/api/patient/emergency-details",
+        `${API_BASE_URL}/api/patient/emergency-details`,
         {
           method: "PATCH",
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type": "application/json`,
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(form),

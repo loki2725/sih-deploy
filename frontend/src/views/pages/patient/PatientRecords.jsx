@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/models/apiModel.js";
 import { useState, useEffect, useRef } from "react";
 import {
   Upload,
@@ -42,7 +43,7 @@ export function PatientRecords() {
   const fetchRecords = async () => {
     try {
       const token = getAuthToken();
-      const res = await fetch("http://localhost:5001/api/records/mine", {
+      const res = await fetch(`${API_BASE_URL}/api/records/mine`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to load your records");
@@ -74,8 +75,8 @@ export function PatientRecords() {
       // This single request covers the whole trip - multer receiving the
       // file, then us pushing it up to Cloudinary server-side - so
       // "pending" covers that entire window from the UI's perspective.
-      const res = await fetch("http://localhost:5001/api/records/upload", {
-        method: "POST",
+      const res = await fetch(`${API_BASE_URL}/api/records/upload`, {
+        method: "POST`,
         headers: { Authorization: `Bearer ${token}` }, // don't set Content-Type - browser sets the multipart boundary
         body: formData,
       });
@@ -106,7 +107,7 @@ export function PatientRecords() {
     try {
       const token = getAuthToken();
       const res = await fetch(
-        `http://localhost:5001/api/records/${record._id}/download`,
+        `${API_BASE_URL}/api/records/${record._id}/download`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       if (!res.ok) throw new Error("Download failed");

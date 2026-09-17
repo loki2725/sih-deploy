@@ -15,18 +15,21 @@ export const linkPatientByCode = async (req, res, next) => {
   try {
     const { code } = req.body;
     const normalizedCode = String(code || "").trim().toUpperCase();
-    const prefix = normalizedCode.startsWith("MC-") ? normalizedCode.slice(3) : "";
+    const connectionCode = normalizedCode.startsWith("MC-") ? normalizedCode.slice(3) : normalizedCode;
 
-    if (!/^[0-9A-F]{6}$/.test(prefix)) {
+    if (!/^[0-9A-F]{8}$/.test(connectionCode)) {
       return res.status(400).json({ error: "Invalid connection code" });
     }
 
-    const patients = await User.find({ role: "patient" }).select("_id name");
-    const patient = patients.find(
-      (candidate) => candidate._id.toString().slice(0, 6).toUpperCase() === prefix,
-    );
+    const patient = await User.findOne({
+      role: "patient",
+      patientConnectionCode: connectionCode,
+    }).select("_id name email patientConnectionCode");
 
     if (!patient) return res.status(404).json({ error: "Patient not found" });
+    if (patient.linkedDoctor && String(patient.linkedDoctor) !== String(req.user.id)) {
+      return res.status(409).json({ error: "This patient is already connected to another doctor." });
+    }
 
     await User.findByIdAndUpdate(req.user.id, {
       $addToSet: { linkedPatients: patient._id },
@@ -47,8 +50,8 @@ export const linkPatientByCode = async (req, res, next) => {
 export const getPatients = async (req, res, next) => {
   try {
     const doctor = await User.findById(req.user.id)
-      .populate("linkedPatients", "-password -otp")
-      .populate("pendingPatients", "-password -otp");
+      .populate("linkedPatients", "-password -otp -passwordResetOtp -passwordResetOtpExpiresAt -passwordResetLastSentAt -passwordResetAttempts")
+      .populate("pendingPatients", "-password -otp -passwordResetOtp -passwordResetOtpExpiresAt -passwordResetLastSentAt -passwordResetAttempts");
 
     if (!doctor) return res.status(404).json({ error: "Doctor not found" });
 
@@ -58,8 +61,8 @@ export const getPatients = async (req, res, next) => {
 
     // Re-read after midnight rollover so the response contains the current plan.
     const refreshedDoctor = await User.findById(req.user.id)
-      .populate("linkedPatients", "-password -otp")
-      .populate("pendingPatients", "-password -otp");
+      .populate("linkedPatients", "-password -otp -passwordResetOtp -passwordResetOtpExpiresAt -passwordResetLastSentAt -passwordResetAttempts")
+      .populate("pendingPatients", "-password -otp -passwordResetOtp -passwordResetOtpExpiresAt -passwordResetLastSentAt -passwordResetAttempts");
 
     res.json({
       linkedPatients: refreshedDoctor.linkedPatients || [],
@@ -77,6 +80,12 @@ export const acceptPatient = async (req, res, next) => {
 
     const patient = await User.findOne({ _id: patientId, role: "patient" });
     if (!patient) return res.status(404).json({ error: "Patient not found" });
+    if (patient.linkedDoctor && String(patient.linkedDoctor) !== String(req.user.id)) {
+      return res.status(409).json({ error: "This patient is already connected to another doctor." });
+    }
+    if (patient.requestedDoctor && String(patient.requestedDoctor) !== String(req.user.id)) {
+      return res.status(403).json({ error: "This patient did not request a connection with your account." });
+    }
 
     await User.findByIdAndUpdate(req.user.id, {
       $pull: { pendingPatients: patientId },

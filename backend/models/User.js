@@ -57,6 +57,8 @@ const userSchema = new mongoose.Schema({
   isVerified: { type: Boolean, default: false },
   otp: { type: String, default: null },
   otpExpiresAt: { type: Date, default: null },
+  otpAttempts: { type: Number, default: 0 },
+  otpLastSentAt: { type: Date, default: null },
 
   // Password reset OTP (kept separate from signup verification OTP)
   passwordResetOtp: { type: String, default: null },
@@ -113,6 +115,8 @@ const userSchema = new mongoose.Schema({
     ref: "User",
     default: null,
   },
+  // Random, non-guessable patient connection code. The MC- prefix is UI-only.
+  patientConnectionCode: { type: String, unique: true, sparse: true, index: true },
   linkedDoctor: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",

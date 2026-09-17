@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/models/apiModel.js";
 import { useState, useEffect, useMemo } from "react";
 import {
   ChevronLeft,
@@ -100,7 +101,7 @@ export function DoctorPatientDetail({ patient, onBack }) {
         if (!patientId) return;
 
         const response = await fetch(
-          `http://localhost:5001/api/doctor/patients/${patientId}/games`,
+          `${API_BASE_URL}/api/doctor/patients/${patientId}/games`,
           { headers: { Authorization: `Bearer ${token}` } },
         );
 
@@ -127,7 +128,7 @@ export function DoctorPatientDetail({ patient, onBack }) {
     try {
       if (!patientId) return;
       const response = await fetch(
-        `http://localhost:5001/api/records/patient/${patientId}`,
+        `${API_BASE_URL}/api/records/patient/${patientId}`,
         { headers: authHeader() },
       );
       if (response.ok) {
@@ -144,7 +145,7 @@ export function DoctorPatientDetail({ patient, onBack }) {
     try {
       if (!patientId) return;
       const response = await fetch(
-        `http://localhost:5001/api/doctor/patients/${patientId}/diagnoses`,
+        `${API_BASE_URL}/api/doctor/patients/${patientId}/diagnoses`,
         { headers: authHeader() },
       );
       if (response.ok) {
@@ -167,7 +168,7 @@ export function DoctorPatientDetail({ patient, onBack }) {
     setLoadingCareHistory(true);
     try {
       const response = await fetch(
-        `http://localhost:5001/api/doctor/patients/${patientId}/care-history?date=${dateKey}`,
+        `${API_BASE_URL}/api/doctor/patients/${patientId}/care-history?date=${dateKey}`,
         { headers: authHeader() },
       );
       if (!response.ok) {
@@ -225,7 +226,7 @@ export function DoctorPatientDetail({ patient, onBack }) {
     setDownloadingFileId(record._id);
     try {
       const response = await fetch(
-        `http://localhost:5001/api/records/${record._id}/download`,
+        `${API_BASE_URL}/api/records/${record._id}/download`,
         { headers: authHeader() },
       );
       if (!response.ok) throw new Error("Download failed");
@@ -253,7 +254,7 @@ export function DoctorPatientDetail({ patient, onBack }) {
     setAddingDiagnosis(true);
     try {
       const response = await fetch(
-        `http://localhost:5001/api/doctor/patients/${patientId}/diagnoses`,
+        `${API_BASE_URL}/api/doctor/patients/${patientId}/diagnoses`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json", ...authHeader() },
@@ -281,7 +282,7 @@ export function DoctorPatientDetail({ patient, onBack }) {
     setSavingDiagnosisId(noteId);
     try {
       const response = await fetch(
-        `http://localhost:5001/api/doctor/patients/${patientId}/diagnoses/${noteId}`,
+        `${API_BASE_URL}/api/doctor/patients/${patientId}/diagnoses/${noteId}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json", ...authHeader() },
@@ -304,7 +305,7 @@ export function DoctorPatientDetail({ patient, onBack }) {
     setDeletingDiagnosisId(noteId);
     try {
       const response = await fetch(
-        `http://localhost:5001/api/doctor/patients/${patientId}/diagnoses/${noteId}`,
+        `${API_BASE_URL}/api/doctor/patients/${patientId}/diagnoses/${noteId}`,
         { method: "DELETE", headers: authHeader() },
       );
       if (response.ok) {
@@ -485,7 +486,7 @@ export function DoctorPatientDetail({ patient, onBack }) {
             <div className="text-xs" style={{ color: T.inkSoft }}>
               {patient.age ? `${patient.age} yrs` : "Age not specified"} •{" "}
               {patient.condition || "No condition listed"} • ID: MC-
-              {patientId?.substring(0, 6).toUpperCase()}
+              {patient.patientConnectionCode || "--------"}
             </div>
           </div>
         </div>

@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/models/apiModel.js";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ChevronLeft, ListOrdered, Eye, Timer, Trophy } from "lucide-react";
 import { T } from "@/models/constant.js";
@@ -131,10 +132,10 @@ export function NumberOrderGame({ onBack }) {
       const token = localStorage.getItem("token") || user.token;
       const patientId = user._id || user.id;
 
-      const response = await fetch("http://localhost:5001/api/games/log", {
+      const response = await fetch(`${API_BASE_URL}/api/games/log`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/json`,
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({

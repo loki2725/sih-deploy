@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/models/apiModel.js";
 import { useState, useEffect } from "react";
 import {
   Link2,
@@ -33,7 +34,7 @@ export function PatientProfile() {
       const token = localStorage.getItem("token") || user.token;
       if (!token) return;
 
-      const response = await fetch("http://localhost:5001/api/auth/me", {
+      const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -63,7 +64,7 @@ export function PatientProfile() {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       const token = localStorage.getItem("token") || user.token;
 
-      const res = await fetch("http://localhost:5001/api/patient/doctors", {
+      const res = await fetch(`${API_BASE_URL}/api/patient/doctors`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -83,11 +84,11 @@ export function PatientProfile() {
       const token = localStorage.getItem("token") || user.token;
 
       const res = await fetch(
-        "http://localhost:5001/api/patient/request-doctor",
+        `${API_BASE_URL}/api/patient/request-doctor`,
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type": "application/json`,
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ doctorId }),
@@ -141,7 +142,7 @@ export function PatientProfile() {
   }
 
   const medications = profileData.medications || [];
-  const displayCode = `MC-${profileData._id?.substring(0, 6).toUpperCase()}`;
+  const displayCode = profileData.patientConnectionCode ? `MC-${profileData.patientConnectionCode}` : "Generating...";
   const linkedDoctor = profileData.linkedDoctor;
 
   return (
