@@ -26,8 +26,8 @@ import { Badge, Card, Button } from "@/views/components/common/Primitive.jsx";
 import { ChatBox } from "@/views/components/common/ChatBox.jsx"; // <-- ADDED CHAT IMPORT
 import { performanceHistory } from "@/models/mockdata.js";
 import { careController } from "@/controllers/careController.js";
-import {
 import { API_BASE_URL } from "@/models/apiModel.js";
+import {
   LineChart,
   Line,
   XAxis,
