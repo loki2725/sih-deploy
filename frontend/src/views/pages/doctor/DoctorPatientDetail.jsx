@@ -1,3 +1,4 @@
+import { apiClient } from "@/services/apiClient.js";
 import { API_BASE_URL } from "@/models/apiModel.js";
 import { useState, useEffect, useMemo } from "react";
 import {
@@ -18,6 +19,7 @@ import {
   Check,
   ClipboardList,
   Bell,
+  Pill,
   CalendarDays,
   ChevronLeft as CalendarChevronLeft,
   ChevronRight as CalendarChevronRight,
@@ -100,7 +102,7 @@ export function DoctorPatientDetail({ patient, onBack }) {
         const token = localStorage.getItem("token") || user.token;
         if (!patientId) return;
 
-        const response = await fetch(
+        const response = await apiClient(
           `${API_BASE_URL}/api/doctor/patients/${patientId}/games`,
           { headers: { Authorization: `Bearer ${token}` } },
         );
@@ -127,7 +129,7 @@ export function DoctorPatientDetail({ patient, onBack }) {
   const fetchPatientFiles = async () => {
     try {
       if (!patientId) return;
-      const response = await fetch(
+      const response = await apiClient(
         `${API_BASE_URL}/api/records/patient/${patientId}`,
         { headers: authHeader() },
       );
@@ -144,7 +146,7 @@ export function DoctorPatientDetail({ patient, onBack }) {
   const fetchDiagnoses = async () => {
     try {
       if (!patientId) return;
-      const response = await fetch(
+      const response = await apiClient(
         `${API_BASE_URL}/api/doctor/patients/${patientId}/diagnoses`,
         { headers: authHeader() },
       );
@@ -159,15 +161,19 @@ export function DoctorPatientDetail({ patient, onBack }) {
   };
 
   useEffect(() => {
-    fetchPatientFiles();
-    fetchDiagnoses();
+    queueMicrotask(() => {
+      fetchPatientFiles();
+      fetchDiagnoses();
+    });
+    // These helpers intentionally read the current auth token from storage.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patientId]);
 
   const fetchCareHistory = async (dateKey = selectedCareDate) => {
     if (!patientId) return;
     setLoadingCareHistory(true);
     try {
-      const response = await fetch(
+      const response = await apiClient(
         `${API_BASE_URL}/api/doctor/patients/${patientId}/care-history?date=${dateKey}`,
         { headers: authHeader() },
       );
@@ -186,8 +192,10 @@ export function DoctorPatientDetail({ patient, onBack }) {
 
   useEffect(() => {
     if (tab === "care-history") {
-      fetchCareHistory(selectedCareDate);
+      queueMicrotask(() => fetchCareHistory(selectedCareDate));
     }
+    // Helper intentionally reads the current auth token from storage.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patientId, selectedCareDate, tab]);
 
   const formatDateKey = (year, month, day) =>
@@ -225,7 +233,7 @@ export function DoctorPatientDetail({ patient, onBack }) {
   const handleDownloadFile = async (record) => {
     setDownloadingFileId(record._id);
     try {
-      const response = await fetch(
+      const response = await apiClient(
         `${API_BASE_URL}/api/records/${record._id}/download`,
         { headers: authHeader() },
       );
@@ -253,7 +261,7 @@ export function DoctorPatientDetail({ patient, onBack }) {
 
     setAddingDiagnosis(true);
     try {
-      const response = await fetch(
+      const response = await apiClient(
         `${API_BASE_URL}/api/doctor/patients/${patientId}/diagnoses`,
         {
           method: "POST",
@@ -281,7 +289,7 @@ export function DoctorPatientDetail({ patient, onBack }) {
     if (!editingDiagnosisText.trim()) return;
     setSavingDiagnosisId(noteId);
     try {
-      const response = await fetch(
+      const response = await apiClient(
         `${API_BASE_URL}/api/doctor/patients/${patientId}/diagnoses/${noteId}`,
         {
           method: "PATCH",
@@ -304,7 +312,7 @@ export function DoctorPatientDetail({ patient, onBack }) {
     if (!confirm("Delete this note?")) return;
     setDeletingDiagnosisId(noteId);
     try {
-      const response = await fetch(
+      const response = await apiClient(
         `${API_BASE_URL}/api/doctor/patients/${patientId}/diagnoses/${noteId}`,
         { method: "DELETE", headers: authHeader() },
       );
@@ -434,12 +442,13 @@ export function DoctorPatientDetail({ patient, onBack }) {
       .map((game, index) => {
         const levels = game.levelReached || game.level || 1;
         const durationSec = game.duration || game.timeTaken || 0;
-        let avgTime = 0;
-
-        if (game.avgTimePerLevel) avgTime = game.avgTimePerLevel;
-        else if (durationSec > 0) avgTime = durationSec / levels;
-        else if (game.reactionTime) avgTime = game.reactionTime / 1000;
-        else avgTime = Math.max(1.8, +(4.5 - index * 0.2).toFixed(1));
+        const avgTime = game.avgTimePerLevel
+          ? game.avgTimePerLevel
+          : durationSec > 0
+            ? durationSec / levels
+            : game.reactionTime
+              ? game.reactionTime / 1000
+              : Math.max(1.8, +(4.5 - index * 0.2).toFixed(1));
 
         return {
           session: `S${index + 1}`,
@@ -942,6 +951,12 @@ export function DoctorPatientDetail({ patient, onBack }) {
                 <Plus size={16} /> {submittingMed ? "Adding..." : "Prescribe"}
               </Button>
             </form>
+            {careError && (
+              <div className="text-xs mt-3" style={{ color: T.red }}>{careError}</div>
+            )}
+            {careSuccess && (
+              <div className="text-xs mt-3" style={{ color: T.mint }}>{careSuccess}</div>
+            )}
           </Card>
 
           <Card>

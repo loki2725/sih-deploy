@@ -1,3 +1,4 @@
+import { apiClient } from "@/services/apiClient.js";
 import { API_BASE_URL } from "@/models/apiModel.js";
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
@@ -66,6 +67,9 @@ function loadBest() {
   return { score: 0, round: 0 };
 }
 
+const getTimestamp = () => Date.now();
+const randomIndex = (length) => Math.floor(Math.random() * length);
+
 // ---- Component ------------------------------------------------------------
 export function OddOneOutGame({ onBack }) {
   const [mode, setMode] = useState("shape"); // shape | color
@@ -99,7 +103,7 @@ export function OddOneOutGame({ onBack }) {
       const size = gridSizeForRound(r);
       setGridSize(size);
       setCols(colsForSize(size));
-      setOddIndex(Math.floor(Math.random() * size));
+      setOddIndex(randomIndex(size));
       setWrongIndex(null);
 
       if (mode === "shape") {
@@ -120,12 +124,12 @@ export function OddOneOutGame({ onBack }) {
     setPeakRound(1);
     setScore(0);
     setIsNewBest(false);
-    setGameStartTime(Date.now());
+    setGameStartTime(getTimestamp());
     startRound(1);
   };
 
   const saveGameSession = async (roundsCleared) => {
-    const endTime = Date.now();
+    const endTime = getTimestamp();
     const durationSec = Math.max(
       1,
       Math.floor((endTime - gameStartTime) / 1000),
@@ -139,10 +143,10 @@ export function OddOneOutGame({ onBack }) {
       const token = localStorage.getItem("token") || user.token;
       const patientId = user._id || user.id;
 
-      const response = await fetch(`${API_BASE_URL}/api/games/log`, {
+      const response = await apiClient(`${API_BASE_URL}/api/games/log`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json`,
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
@@ -188,7 +192,7 @@ export function OddOneOutGame({ onBack }) {
 
     if (index === oddIndex) {
       lockedRef.current = true;
-      setCheer(ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)]);
+      setCheer(ENCOURAGEMENTS[randomIndex(ENCOURAGEMENTS.length)]);
       setPhase("correct");
       setScore((s) => s + 10 * gridSize);
       advanceRef.current = setTimeout(() => {

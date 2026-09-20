@@ -1,10 +1,10 @@
+import { apiClient } from "@/services/apiClient.js";
 import { useEffect, useState } from "react";
 import { AlertTriangle, Bell, KeyRound, Trash2 } from "lucide-react";
 import { T } from "@/models/constant.js";
 import { Button, Card } from "@/views/components/common/Primitive.jsx";
 import { accountController } from "@/controllers/accountController.js";
 import { storageModel } from "@/models/storageModel.js";
-import { apiClient } from "@/services/apiClient.js";
 
 export function AccountSettings({ onLogout }) {
   const role = storageModel.getRole();

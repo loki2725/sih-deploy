@@ -62,28 +62,27 @@ export const register = async (req, res, next) => {
 
     const savedUser = await newUser.save();
 
-    // Do not make the signup request wait for the external SMTP server.
-    // The account + OTP are already safely stored in MongoDB, so the user can
-    // move to the verification screen immediately while the email is sent in
-    // the background. This removes SMTP latency from the signup UX.
-    sendOtpEmail(savedUser.email, otp, savedUser.name).catch(async (mailError) => {
-      console.error("Failed to send OTP email:", mailError.message);
-      // Remove the account only if email delivery fails before verification.
-      // If the user has already verified meanwhile, keep the account.
-      try {
-        const pendingUser = await User.findOne({ _id: savedUser._id, isVerified: false });
-        if (pendingUser) {
-          pendingUser.otp = null;
-          pendingUser.otpExpiresAt = null;
-          await pendingUser.save();
-        }
-      } catch (cleanupError) {
-        console.error("Failed to clear OTP after email failure:", cleanupError.message);
-      }
-    });
+    // OTP delivery is a required part of signup. Keep the request bounded so a
+    // broken SMTP configuration cannot make the browser wait forever, while
+    // also avoiding the old behaviour where signup reported success even when
+    // the email had actually failed.
+    try {
+      await sendOtpEmail(savedUser.email, otp, savedUser.name);
+    } catch (mailError) {
+      console.error("Failed to send signup OTP email:", mailError.message);
+      await User.findByIdAndUpdate(savedUser._id, {
+        $set: { otp: null, otpExpiresAt: null, otpLastSentAt: null, otpAttempts: 0 },
+      });
+      return res.status(502).json({
+        error: "Account was created, but the verification email could not be sent. You can request a new code from the verification screen.",
+        needsVerification: true,
+        emailDeliveryFailed: true,
+        email: savedUser.email,
+      });
+    }
 
     res.status(201).json({
-      message: "Account created. Your verification code is being sent to your email.",
+      message: "Account created. Your verification code has been sent to your email.",
       email: savedUser.email,
     });
   } catch (error) {
@@ -170,13 +169,24 @@ export const resendOtp = async (req, res, next) => {
     user.otpLastSentAt = new Date();
     await user.save();
 
-    // Do not block the HTTP response on SMTP. The new OTP is already stored;
-    // the email is dispatched in the background.
-    sendOtpEmail(user.email, otp, user.name).catch((mailError) => {
+    try {
+      await sendOtpEmail(user.email, otp, user.name);
+    } catch (mailError) {
       console.error("Failed to resend OTP email:", mailError.message);
-    });
+      user.otp = null;
+      user.otpExpiresAt = null;
+      user.otpAttempts = 0;
+      user.otpLastSentAt = null;
+      await user.save();
+      return res.status(502).json({
+        error: "The verification email could not be sent. Please check the email service configuration and try again.",
+        needsVerification: true,
+        emailDeliveryFailed: true,
+        email: user.email,
+      });
+    }
 
-    res.status(200).json({ message: "A new OTP is being sent to your email." });
+    res.status(200).json({ message: "A new OTP has been sent to your email." });
   } catch (error) {
     next(error);
   }

@@ -1,3 +1,4 @@
+import { apiClient } from "@/services/apiClient.js";
 import { API_BASE_URL } from "@/models/apiModel.js";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ChevronLeft, BrainCircuit } from "lucide-react";
@@ -70,6 +71,8 @@ function generateOptions(correctSeq) {
   return shuffle(pool);
 }
 
+const getTimestamp = () => Date.now();
+
 // ---- Component ----------------------------------------------------------
 export function ColorMemoryGame({ onBack }) {
   const [level, setLevel] = useState(1);
@@ -109,7 +112,7 @@ export function ColorMemoryGame({ onBack }) {
   // --- BACKEND INTEGRATION ---
   const saveGameSession = async (finalLevel) => {
     // Ensure we don't divide by zero if they click instantly
-    const endTime = Date.now();
+    const endTime = getTimestamp();
     const durationSec = Math.max(
       1,
       Math.floor((endTime - gameStartTime) / 1000),
@@ -127,10 +130,10 @@ export function ColorMemoryGame({ onBack }) {
       const token = localStorage.getItem("token") || user.token;
       const patientId = user._id || user.id;
 
-      const response = await fetch(`${API_BASE_URL}/api/games/log`, {
+      const response = await apiClient(`${API_BASE_URL}/api/games/log`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json`,
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
@@ -160,7 +163,7 @@ export function ColorMemoryGame({ onBack }) {
   const handleStart = () => {
     setLevel(1);
     setPeakLevel(1);
-    setGameStartTime(Date.now());
+    setGameStartTime(getTimestamp());
     startRound(1);
   };
 

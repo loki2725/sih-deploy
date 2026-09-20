@@ -1,3 +1,4 @@
+import { apiClient } from "@/services/apiClient.js";
 import { API_BASE_URL } from "@/models/apiModel.js";
 import { useState, useEffect } from "react";
 import { Clock, Stethoscope, Pill, Bell, Users } from "lucide-react";
@@ -27,18 +28,12 @@ export function DoctorDashboard({ onOpenPatient, patientsOnly = false }) {
 
   const doctorTitle = getDoctorDisplayName(currentUser.name);
 
-  useEffect(() => {
-    fetchDoctorPatients();
-    const timer = setInterval(fetchDoctorPatients, 60 * 1000);
-    return () => clearInterval(timer);
-  }, []);
-
   const fetchDoctorPatients = async () => {
     try {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       const token = localStorage.getItem("token") || user.token;
 
-      const response = await fetch(
+      const response = await apiClient(
         `${API_BASE_URL}/api/doctor/patients`,
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -63,17 +58,23 @@ export function DoctorDashboard({ onOpenPatient, patientsOnly = false }) {
     }
   };
 
+  useEffect(() => {
+    queueMicrotask(fetchDoctorPatients);
+    const timer = setInterval(fetchDoctorPatients, 60 * 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   const handleAcceptPatient = async (patientId) => {
     try {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       const token = localStorage.getItem("token") || user.token;
 
-      const response = await fetch(
+      const response = await apiClient(
         `${API_BASE_URL}/api/doctor/accept-patient`,
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json`,
+            "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ patientId }),
@@ -118,7 +119,7 @@ export function DoctorDashboard({ onOpenPatient, patientsOnly = false }) {
                   </div>
                   <Badge tone="primary">Physician Portal</Badge>
                 </div>
-          
+
                   </>
       )}
 

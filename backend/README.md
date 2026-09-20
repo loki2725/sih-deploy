@@ -12,7 +12,7 @@ The NeuroNest backend provides the API, real-time chat server, database access, 
 
 ## Requirements
 
-- Node.js 18 or newer
+- Node.js 20.19 or newer
 - MongoDB (Atlas or local)
 - A Gmail account with an App Password for email features
 - Cloudinary credentials for medical-record uploads
@@ -60,6 +60,14 @@ Create `backend/.env`. Never commit it or share its values.
 | `JWT_SECRET` | Yes | Long, unique secret for login tokens. |
 | `EMAIL_USER` | For email | Gmail address that sends OTP, appointment, reminder, and SOS emails. |
 | `EMAIL_PASS` | For email | Gmail App Password, never the normal account password. |
+| `EMAIL_FROM` | No | Sender address; defaults to `EMAIL_USER`. |
+| `EMAIL_HOST` | No | Generic SMTP hostname. If omitted, Gmail SMTP is used. |
+| `EMAIL_PORT` | No | Generic SMTP port; commonly `587`. |
+| `EMAIL_SECURE` | No | `true` for TLS-on-connect SMTP such as port `465`; otherwise `false`. |
+| `EMAIL_SEND_TIMEOUT_MS` | No | Maximum time a single email send may wait; defaults to `12000`. |
+| `EMAIL_CONNECTION_TIMEOUT_MS` | No | SMTP connection timeout; defaults to `8000`. |
+| `EMAIL_GREETING_TIMEOUT_MS` | No | SMTP greeting timeout; defaults to `8000`. |
+| `EMAIL_SOCKET_TIMEOUT_MS` | No | SMTP socket timeout; defaults to `10000`. |
 | `CLOUDINARY_CLOUD_NAME` | For uploads | Cloudinary cloud name. |
 | `CLOUDINARY_API_KEY` | For uploads | Cloudinary API key. |
 | `CLOUDINARY_API_SECRET` | For uploads | Cloudinary API secret. |
@@ -67,6 +75,14 @@ Create `backend/.env`. Never commit it or share its values.
 | `FRONTEND_URL` | Deployed frontend | Comma-separated browser origins allowed by CORS. |
 
 Local Vite addresses `http://localhost:5173` and `http://localhost:5174` are already allowed. Add the deployed browser URL to `FRONTEND_URL` before deployment.
+
+### Email troubleshooting
+
+At startup, the server performs a non-blocking SMTP verification and logs either `Email transport verified successfully` or `Email transport is not ready: ...`. Email sends are bounded by a timeout so an unreachable SMTP server cannot hold an API request forever.
+
+For Gmail, `EMAIL_USER` must be the sending Gmail address and `EMAIL_PASS` must be a Google App Password. Do not use the normal Gmail account password. For other SMTP providers, set `EMAIL_HOST`, `EMAIL_PORT`, and `EMAIL_SECURE` and keep `EMAIL_USER`/`EMAIL_PASS` as the SMTP credentials.
+
+Signup, OTP resend, and password-reset delivery failures are surfaced to the browser instead of being reported as successful sends.
 
 ## API overview
 
@@ -131,3 +147,13 @@ backend/
 - Set `FRONTEND_URL` to the deployed frontend origin; keep only trusted origins in the CORS list.
 - Cloudinary is optional only when medical-record upload is unused. The server warns if its credentials are missing.
 - Email-dependent flows, including account verification and SOS confirmation, require valid Gmail SMTP settings.
+
+### Test email delivery locally
+
+After creating `backend/.env`, run:
+
+```bash
+npm run email:test
+```
+
+Optionally set `EMAIL_TEST_TO` to a different inbox. The command verifies SMTP and sends a test six-digit code. If it fails, the terminal error identifies whether the issue is missing credentials, SMTP authentication, connectivity, or a timeout.

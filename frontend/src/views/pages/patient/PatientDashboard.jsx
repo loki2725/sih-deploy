@@ -1,3 +1,4 @@
+import { apiClient } from "@/services/apiClient.js";
 import { API_BASE_URL } from "@/models/apiModel.js";
 import { useState, useEffect } from "react";
 import { T } from "@/models/constant.js";
@@ -27,7 +28,7 @@ export function PatientDashboard() {
           return;
         }
 
-        const response = await fetch(
+        const response = await apiClient(
           `${API_BASE_URL}/api/games/history/${patientId}`,
           {
             headers: { Authorization: `Bearer ${token}` },

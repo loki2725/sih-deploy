@@ -1,3 +1,4 @@
+import { apiClient } from "@/services/apiClient.js";
 import { API_BASE_URL } from "@/models/apiModel.js";
 import { useState } from "react";
 import { Check } from "lucide-react";
@@ -16,10 +17,10 @@ export function AddPatientModal({ onClose, onConnected }) {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       const token = localStorage.getItem("token") || user.token;
 
-      const response = await fetch(`${API_BASE_URL}/api/doctor/link`, {
+      const response = await apiClient(`${API_BASE_URL}/api/doctor/link`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json`,
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ code }),

@@ -1,3 +1,4 @@
+import { apiClient } from "@/services/apiClient.js";
 import { API_BASE_URL } from "@/models/apiModel.js";
 import { useState, useEffect, useMemo } from "react";
 import {
@@ -61,7 +62,7 @@ export function DoctorAppointments() {
       const token = localStorage.getItem("token") || user.token;
       if (!token) return;
 
-      const res = await fetch(
+      const res = await apiClient(
         `${API_BASE_URL}/api/appointments/doctor`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -82,7 +83,7 @@ export function DoctorAppointments() {
   };
 
   useEffect(() => {
-    fetchAppointments();
+    queueMicrotask(fetchAppointments);
   }, []);
 
   const pending = useMemo(
@@ -116,7 +117,7 @@ export function DoctorAppointments() {
 
     return Object.entries(groups)
       .sort(([a], [b]) => (a < b ? -1 : 1))
-      .map(([key, appts]) => ({
+      .map(([, appts]) => ({
         date: new Date(appts[0].scheduledDate),
         count: appts.length,
       }));
@@ -164,7 +165,7 @@ export function DoctorAppointments() {
         `${scheduleDate}T${scheduleTime}`,
       ).toISOString();
 
-      const res = await fetch(
+      const res = await apiClient(
         `${API_BASE_URL}/api/appointments/${schedulingId}/schedule`,
         {
           method: "POST",
@@ -194,7 +195,7 @@ export function DoctorAppointments() {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       const token = localStorage.getItem("token") || user.token;
 
-      const res = await fetch(
+      const res = await apiClient(
         `${API_BASE_URL}/api/appointments/${appointmentId}/decline`,
         {
           method: "POST",

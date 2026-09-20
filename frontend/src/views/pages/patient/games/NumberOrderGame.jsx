@@ -1,3 +1,4 @@
+import { apiClient } from "@/services/apiClient.js";
 import { API_BASE_URL } from "@/models/apiModel.js";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ChevronLeft, ListOrdered, Eye, Timer, Trophy } from "lucide-react";
@@ -67,6 +68,9 @@ function generateBoard(round) {
   return { count, order, ascending, viewMs: viewMsForRound(round) };
 }
 
+const getTimestamp = () => Date.now();
+const randomIndex = (length) => Math.floor(Math.random() * length);
+
 // ---- Component ----------------------------------------------------------
 export function NumberOrderGame({ onBack }) {
   const [round, setRound] = useState(1);
@@ -110,12 +114,12 @@ export function NumberOrderGame({ onBack }) {
     setPeakRound(1);
     setScore(0);
     setIsNewBest(false);
-    setGameStartTime(Date.now());
+    setGameStartTime(getTimestamp());
     startRound(1);
   };
 
   const saveGameSession = async (roundsCleared) => {
-    const endTime = Date.now();
+    const endTime = getTimestamp();
     const durationSec = Math.max(
       1,
       Math.floor((endTime - gameStartTime) / 1000),
@@ -132,10 +136,10 @@ export function NumberOrderGame({ onBack }) {
       const token = localStorage.getItem("token") || user.token;
       const patientId = user._id || user.id;
 
-      const response = await fetch(`${API_BASE_URL}/api/games/log`, {
+      const response = await apiClient(`${API_BASE_URL}/api/games/log`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json`,
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
@@ -189,7 +193,7 @@ export function NumberOrderGame({ onBack }) {
         // Round fully cleared
         lockedRef.current = true;
         setCheer(
-          ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)],
+          ENCOURAGEMENTS[randomIndex(ENCOURAGEMENTS.length)],
         );
         setPhase("cleared");
         const roundScore = board.count * 20;

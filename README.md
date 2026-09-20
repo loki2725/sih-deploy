@@ -47,7 +47,7 @@ Doctor reviews care, manages plans and appointments, and communicates securely
 
 ## Quick start
 
-You need Node.js 18+, MongoDB, a Gmail App Password for email features, and Cloudinary credentials if medical-record upload is required.
+You need Node.js 20.19+, MongoDB, a Gmail App Password for email features, and Cloudinary credentials if medical-record upload is required. NeuroNest also supports a generic SMTP server through `EMAIL_HOST`, `EMAIL_PORT`, and `EMAIL_SECURE`.
 
 1. Start the backend:
 
@@ -82,6 +82,14 @@ You need Node.js 18+, MongoDB, a Gmail App Password for email features, and Clou
    ```
 
 3. Open the address shown by Vite (normally `http://localhost:5173`), choose **Patient** or **Doctor**, create an account, and verify the code sent to your email.
+
+### If OTP email does not arrive
+
+The backend now verifies the SMTP transport at startup and bounds email sends with a timeout. Check the backend terminal for `Email transport verified successfully` or `Email transport is not ready: ...`.
+
+For Gmail, use a Google **App Password**, not the normal Gmail password. If the App Password was copied with spaces, NeuroNest removes the spaces automatically. If Gmail SMTP is unavailable in your hosting environment, configure a transactional/generic SMTP provider with `EMAIL_HOST`, `EMAIL_PORT`, and `EMAIL_SECURE` instead.
+
+Signup and password-reset flows never claim that an OTP was delivered when SMTP has failed. They return a clear error and allow the user to retry without waiting indefinitely.
 
 ## Important behavior
 

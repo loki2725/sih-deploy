@@ -1,3 +1,4 @@
+import { apiClient } from "@/services/apiClient.js";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Brain, Activity } from "lucide-react";
@@ -44,7 +45,7 @@ export function LoginScreen() {
     if (!loading || !slowOperation) {
       if (slowMessageTimerRef.current) clearTimeout(slowMessageTimerRef.current);
       if (slowMessageHideTimerRef.current) clearTimeout(slowMessageHideTimerRef.current);
-      setSlowMessageVisible(false);
+      queueMicrotask(() => setSlowMessageVisible(false));
       return;
     }
 
@@ -80,20 +81,25 @@ export function LoginScreen() {
       : { email: formData.email, password: formData.password };
 
     try {
-      const response = await fetch(endpoint, {
+      const response = await apiClient(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         // Existing account that never verified -> send them straight to OTP entry
         if (data.needsVerification) {
           setPendingVerification(true);
-          setError(null);
-          setOtpMessage("This account isn't verified yet. Enter the code sent to your email, or resend a new one.");
+          setError(data.emailDeliveryFailed ? data.error : null);
+          setOtpMessage(
+            data.emailDeliveryFailed
+              ? "The account exists but the email could not be delivered. Use Resend code below after checking your email settings."
+              : "This account isn't verified yet. Enter the code sent to your email, or resend a new one.",
+          );
+          if (data.email) setFormData((current) => ({ ...current, email: data.email }));
           return;
         }
         throw new Error(
@@ -166,13 +172,13 @@ export function LoginScreen() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
+      const response = await apiClient(`${API_BASE_URL}/api/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: formData.email, otp }),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(data.error || "Verification failed");
       }
@@ -198,12 +204,12 @@ export function LoginScreen() {
     setLoading(true);
     setSlowOperation("otp");
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/resend-otp`, {
+      const response = await apiClient(`${API_BASE_URL}/api/auth/resend-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: formData.email }),
       });
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(data.error || "Could not resend code");
       }

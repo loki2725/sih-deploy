@@ -1,3 +1,4 @@
+import { apiClient } from "@/services/apiClient.js";
 import { API_BASE_URL } from "@/models/apiModel.js";
 import { useState, useEffect, useMemo } from "react";
 import { Activity, Timer, Filter } from "lucide-react";
@@ -30,7 +31,7 @@ export function PatientHistory() {
           throw new Error("Authentication token missing. Please log in again.");
         }
 
-        const response = await fetch(
+        const response = await apiClient(
           `${API_BASE_URL}/api/games/history/${patientId}`,
           {
             headers: {
@@ -84,12 +85,13 @@ export function PatientHistory() {
       .map((game, index) => {
         const levels = game.levelReached || game.level || 1;
         const durationSec = game.duration || game.timeTaken || 0;
-        let avgTime = 0;
-
-        if (game.avgTimePerLevel) avgTime = game.avgTimePerLevel;
-        else if (durationSec > 0) avgTime = durationSec / levels;
-        else if (game.reactionTime) avgTime = game.reactionTime / 1000;
-        else avgTime = Math.max(1.8, +(4.5 - index * 0.2).toFixed(1));
+        const avgTime = game.avgTimePerLevel
+          ? game.avgTimePerLevel
+          : durationSec > 0
+            ? durationSec / levels
+            : game.reactionTime
+              ? game.reactionTime / 1000
+              : Math.max(1.8, +(4.5 - index * 0.2).toFixed(1));
 
         return {
           date: new Date(game.playedAt).toLocaleDateString(undefined, {

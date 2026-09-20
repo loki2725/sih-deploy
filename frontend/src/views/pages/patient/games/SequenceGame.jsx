@@ -1,3 +1,4 @@
+import { apiClient } from "@/services/apiClient.js";
 import { API_BASE_URL } from "@/models/apiModel.js";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -30,10 +31,12 @@ export function SequenceGame({ onBack }) {
         positions.push(randomSquare);
       }
     }
-    setBoard(positions);
-    setIsMasked(false);
-    setTargetNum(1);
-    setProcessing(false);
+    queueMicrotask(() => {
+      setBoard(positions);
+      setIsMasked(false);
+      setTargetNum(1);
+      setProcessing(false);
+    });
 
     // Give the patient 3 seconds to memorize before masking the numbers
     const timer = setTimeout(() => {
@@ -67,10 +70,10 @@ export function SequenceGame({ onBack }) {
     };
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/games/log`, {
+      const response = await apiClient(`${API_BASE_URL}/api/games/log`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json`,
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),

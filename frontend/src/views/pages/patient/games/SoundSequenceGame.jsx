@@ -1,8 +1,9 @@
+import { apiClient } from "@/services/apiClient.js";
 import { API_BASE_URL } from "@/models/apiModel.js";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ChevronLeft, Volume2 } from "lucide-react";
 import { T } from "@/models/constant.js";
-import { Card, Button, Badge } from "@/views/components/common/Primitive.jsx";
+import { Card, Button } from "@/views/components/common/Primitive.jsx";
 
 // ---- SOUND DATA ---------------------------------------------------------
 const SOUND_LIBRARY = [
@@ -304,6 +305,8 @@ function generateOptions(correctSeq) {
   return shuffle(pool);
 }
 
+const getTimestamp = () => Date.now();
+
 // ---- MAIN COMPONENT ---------------------------------------------------------
 export function SoundSequenceGame({ onBack }) {
   const [mode, setMode] = useState("survival");
@@ -324,7 +327,7 @@ export function SoundSequenceGame({ onBack }) {
   const cancelledRef = useRef(false);
   const answerStartRef = useRef(0);
 
-  const ensureAudio = () => {
+  const ensureAudio = useCallback(() => {
     if (!audioCtxRef.current) {
       const Ctx = window.AudioContext || window.webkitAudioContext;
       audioCtxRef.current = new Ctx();
@@ -333,7 +336,7 @@ export function SoundSequenceGame({ onBack }) {
       masterGainRef.current.connect(audioCtxRef.current.destination);
     }
     return audioCtxRef.current;
-  };
+  }, [muted]);
 
   useEffect(() => {
     if (masterGainRef.current) masterGainRef.current.gain.value = muted ? 0 : 1;
@@ -350,7 +353,7 @@ export function SoundSequenceGame({ onBack }) {
   const saveGameSession = async (finalLevel, finalScore) => {
     const durationSec = Math.max(
       1,
-      Math.floor((Date.now() - gameStartTime) / 1000),
+      Math.floor((getTimestamp() - gameStartTime) / 1000),
     );
     const accuracyScore = Math.min(100, Math.round(50 + finalLevel * 5));
     const avgTimePerLevel = parseFloat((durationSec / finalLevel).toFixed(1));
@@ -363,10 +366,10 @@ export function SoundSequenceGame({ onBack }) {
       const token = localStorage.getItem("token") || user.token;
       const patientId = user._id || user.id;
 
-      await fetch(`${API_BASE_URL}/api/games/log`, {
+      await apiClient(`${API_BASE_URL}/api/games/log`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json`,
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
@@ -407,10 +410,10 @@ export function SoundSequenceGame({ onBack }) {
       if (cancelledRef.current) return;
       setPlayingIndex(-1);
       setOptions(generateOptions(seq));
-      answerStartRef.current = Date.now();
+      answerStartRef.current = getTimestamp();
       setPhase("answering");
     },
-    [muted],
+    [ensureAudio],
   );
 
   const startLevel = useCallback(
@@ -427,7 +430,7 @@ export function SoundSequenceGame({ onBack }) {
     setStarted(true);
     setLevel(1);
     setScore(0);
-    setGameStartTime(Date.now());
+    setGameStartTime(getTimestamp());
     startLevel(1);
   };
 
@@ -437,7 +440,7 @@ export function SoundSequenceGame({ onBack }) {
 
     const correct = sameSeq(opt, sequence);
     if (correct) {
-      const elapsed = Date.now() - answerStartRef.current;
+      const elapsed = getTimestamp() - answerStartRef.current;
       const points =
         Math.round(100 * (1 + (level - 1) * 0.2)) +
         Math.max(0, Math.round(50 - (elapsed / 1000) * 10));
@@ -564,7 +567,7 @@ export function SoundSequenceGame({ onBack }) {
               {Array.from({ length: 9 }).map((_, i) => (
                 <span
                   key={i}
-                  className={`ss-bar ${true ? "ss-bar-anim" : ""}`}
+                  className="ss-bar ss-bar-anim"
                   style={{ animationDelay: `${i * 70}ms` }}
                 />
               ))}

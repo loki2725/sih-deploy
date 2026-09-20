@@ -5,39 +5,88 @@ dotenv.config();
 // Reusable transporter using Gmail SMTP.
 // Requires EMAIL_USER (your gmail address) and EMAIL_PASS (a 16-char Gmail
 // "App Password" - NOT your normal Gmail password) set in backend/.env
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  pool: true,
-  maxConnections: 3,
-  maxMessages: 50,
-  connectionTimeout: Number(process.env.EMAIL_CONNECTION_TIMEOUT_MS || 10000),
-  greetingTimeout: Number(process.env.EMAIL_GREETING_TIMEOUT_MS || 10000),
-  socketTimeout: Number(process.env.EMAIL_SOCKET_TIMEOUT_MS || 15000),
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const EMAIL_USER = String(process.env.EMAIL_USER || "").trim();
+const EMAIL_PASS = String(process.env.EMAIL_PASS || "").replace(/\s+/g, "");
+const EMAIL_FROM = String(process.env.EMAIL_FROM || EMAIL_USER).trim();
+const EMAIL_TIMEOUT_MS = Number(process.env.EMAIL_SEND_TIMEOUT_MS || 12000);
+
+const smtpOptions = process.env.EMAIL_HOST
+  ? {
+      host: String(process.env.EMAIL_HOST).trim(),
+      port: Number(process.env.EMAIL_PORT || 587),
+      secure: String(process.env.EMAIL_SECURE || "false").toLowerCase() === "true",
+      pool: true,
+      maxConnections: 3,
+      maxMessages: 50,
+      connectionTimeout: Number(process.env.EMAIL_CONNECTION_TIMEOUT_MS || 8000),
+      greetingTimeout: Number(process.env.EMAIL_GREETING_TIMEOUT_MS || 8000),
+      socketTimeout: Number(process.env.EMAIL_SOCKET_TIMEOUT_MS || 10000),
+      auth: { user: EMAIL_USER, pass: EMAIL_PASS },
+    }
+  : {
+      service: "gmail",
+      pool: true,
+      maxConnections: 3,
+      maxMessages: 50,
+      connectionTimeout: Number(process.env.EMAIL_CONNECTION_TIMEOUT_MS || 8000),
+      greetingTimeout: Number(process.env.EMAIL_GREETING_TIMEOUT_MS || 8000),
+      socketTimeout: Number(process.env.EMAIL_SOCKET_TIMEOUT_MS || 10000),
+      auth: { user: EMAIL_USER, pass: EMAIL_PASS },
+    };
+
+const transporter = nodemailer.createTransport(smtpOptions);
+
+const assertEmailConfiguration = () => {
+  if (!EMAIL_USER || !EMAIL_PASS) {
+    throw new Error("Email service is not configured. Set EMAIL_USER and EMAIL_PASS in the backend environment.");
+  }
+};
+
+const sendMail = async (mailOptions) => {
+  assertEmailConfiguration();
+  const timeout = Math.max(3000, EMAIL_TIMEOUT_MS);
+  let timer;
+
+  try {
+    return await Promise.race([
+      transporter.sendMail({ ...mailOptions, from: mailOptions.from || `"NeuroNest" <${EMAIL_FROM}>` }),
+      new Promise((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error("Email delivery timed out. Check the SMTP configuration and network access.")),
+          timeout,
+        );
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
+
+export const verifyEmailTransport = async () => {
+  assertEmailConfiguration();
+  await transporter.verify();
+};
+
 
 export const sendOtpEmail = async (toEmail, otp, name = "") => {
   const mailOptions = {
-    from: `"NeuroNest" <${process.env.EMAIL_USER}>`,
+    from: `"NeuroNest" <${EMAIL_FROM}>`,
     to: toEmail,
     subject: "Verify your NeuroNest account",
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 480px; margin: auto; padding: 24px; border: 1px solid #eee; border-radius: 8px;">
         <h2 style="color: #2d2d2d;">Verify your email</h2>
-        <p>Hi ${name || "there"},</p>
+        <p>Hi ${escapeHtml(name || "there")},</p>
         <p>Use the code below to verify your NeuroNest account. This code expires in 10 minutes.</p>
         <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; text-align: center; background: #f4f4f4; padding: 16px; border-radius: 6px; margin: 20px 0;">
-          ${otp}
+          ${escapeHtml(otp)}
         </div>
         <p style="color: #888; font-size: 13px;">If you didn't request this, you can safely ignore this email.</p>
       </div>
     `,
   };
 
-  await transporter.sendMail(mailOptions);
+  await sendMail(mailOptions);
 };
 
 // Sent to the patient once a doctor picks a date + time for their
@@ -45,23 +94,23 @@ export const sendOtpEmail = async (toEmail, otp, name = "") => {
 
 export const sendPasswordResetEmail = async (toEmail, otp, name = "") => {
   const mailOptions = {
-    from: `"NeuroNest" <${process.env.EMAIL_USER}>`,
+    from: `"NeuroNest" <${EMAIL_FROM}>`,
     to: toEmail,
     subject: "Reset your NeuroNest password",
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 480px; margin: auto; padding: 24px; border: 1px solid #eee; border-radius: 8px;">
         <h2 style="color: #2d2d2d;">Password reset request</h2>
-        <p>Hi ${name || "there"},</p>
+        <p>Hi ${escapeHtml(name || "there")},</p>
         <p>Use the code below to reset your NeuroNest password. This code expires in 10 minutes.</p>
         <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; text-align: center; background: #f4f4f4; padding: 16px; border-radius: 6px; margin: 20px 0;">
-          ${otp}
+          ${escapeHtml(otp)}
         </div>
         <p style="color: #888; font-size: 13px;">If you did not request a password reset, you can safely ignore this email.</p>
       </div>
     `,
   };
 
-  await transporter.sendMail(mailOptions);
+  await sendMail(mailOptions);
 };
 
 export const sendAppointmentConfirmationEmail = async (
@@ -78,7 +127,7 @@ export const sendAppointmentConfirmationEmail = async (
   });
 
   const mailOptions = {
-    from: `"NeuroNest" <${process.env.EMAIL_USER}>`,
+    from: `"NeuroNest" <${EMAIL_FROM}>`,
     to: toEmail,
     subject: "Your appointment has been scheduled",
     html: `
@@ -94,7 +143,7 @@ export const sendAppointmentConfirmationEmail = async (
     `,
   };
 
-  await transporter.sendMail(mailOptions);
+  await sendMail(mailOptions);
 };
 
 // Sent when a patient presses the SOS button.
@@ -121,7 +170,7 @@ export const sendSosAlertEmail = async (
   const safeMapUrl = hasLocation ? escapeHtml(location.mapUrl) : "#";
 
   const mailOptions = {
-    from: `"NeuroNest" <${process.env.EMAIL_USER}>`,
+    from: `"NeuroNest" <${EMAIL_FROM}>`,
     to: toEmail,
     subject: `SOS Alert: ${patientName} needs help`,
     html: `
@@ -141,7 +190,7 @@ export const sendSosAlertEmail = async (
     `,
   };
 
-  await transporter.sendMail(mailOptions);
+  await sendMail(mailOptions);
 };
 
 export const sendSosDoctorOtpEmail = async (
@@ -160,7 +209,7 @@ export const sendSosDoctorOtpEmail = async (
   });
 
   const mailOptions = {
-    from: `"NeuroNest" <${process.env.EMAIL_USER}>`,
+    from: `"NeuroNest" <${EMAIL_FROM}>`,
     to: toEmail,
     subject: `SOS OTP: ${patientName} needs help`,
     html: `
@@ -182,7 +231,7 @@ export const sendSosDoctorOtpEmail = async (
     `,
   };
 
-  await transporter.sendMail(mailOptions);
+  await sendMail(mailOptions);
 };
 
 export const sendSosLocationToDoctorEmail = async (
@@ -215,8 +264,8 @@ export const sendSosLocationToDoctorEmail = async (
     minute: "2-digit",
   });
 
-  await transporter.sendMail({
-    from: `"NeuroNest" <${process.env.EMAIL_USER}>`,
+  await sendMail({
+    from: `"NeuroNest" <${EMAIL_FROM}>`,
     to: toEmail,
     subject: `SOS location: ${patientName} — verified access`,
     html: `
@@ -269,7 +318,7 @@ export const sendSosLocationViewedEmail = async (
   });
 
   const mailOptions = {
-    from: `"NeuroNest" <${process.env.EMAIL_USER}>`,
+    from: `"NeuroNest" <${EMAIL_FROM}>`,
     to: toEmail,
     subject: "Your NeuroNest SOS location was viewed",
     html: `
@@ -287,7 +336,7 @@ export const sendSosLocationViewedEmail = async (
     `,
   };
 
-  await transporter.sendMail(mailOptions);
+  await sendMail(mailOptions);
 };
 
 
@@ -307,8 +356,8 @@ export const sendDoctorMissedGameEmail = async (
   const safePatient = escapeHtml(patientName || "Patient");
   const safeDate = escapeHtml(dateKey || "today");
 
-  await transporter.sendMail({
-    from: `"NeuroNest" <${process.env.EMAIL_USER}>`,
+  await sendMail({
+    from: `"NeuroNest" <${EMAIL_FROM}>`,
     to: toEmail,
     subject: `NeuroNest care alert: ${patientName} missed the morning game`,
     html: `
@@ -336,8 +385,8 @@ export const sendDoctorMissedCareItemEmail = async (
   const safeItem = escapeHtml(itemName || "Care item");
   const safeTime = escapeHtml(scheduledTime || "");
 
-  await transporter.sendMail({
-    from: `"NeuroNest" <${process.env.EMAIL_USER}>`,
+  await sendMail({
+    from: `"NeuroNest" <${EMAIL_FROM}>`,
     to: toEmail,
     subject: `NeuroNest care alert: ${patientName} has an overdue ${itemType}`,
     html: `
@@ -378,7 +427,7 @@ export const sendDailyCareReminderEmail = async (
   const safeBody = escapeHtml(body);
 
   const mailOptions = {
-    from: `"NeuroNest" <${process.env.EMAIL_USER}>`,
+    from: `"NeuroNest" <${EMAIL_FROM}>`,
     to: toEmail,
     subject,
     html: `
@@ -394,7 +443,7 @@ export const sendDailyCareReminderEmail = async (
     `,
   };
 
-  await transporter.sendMail(mailOptions);
+  await sendMail(mailOptions);
 };
 
 export const sendMedicationReminderEmail = async (
@@ -406,7 +455,7 @@ export const sendMedicationReminderEmail = async (
   const safeDosage = escapeHtml(dosage || "");
   const safeTime = escapeHtml(scheduledTime);
   const mailOptions = {
-    from: `"NeuroNest" <${process.env.EMAIL_USER}>`,
+    from: `"NeuroNest" <${EMAIL_FROM}>`,
     to: toEmail,
     subject: `Medication reminder: ${medicationName}`,
     html: `
@@ -421,7 +470,7 @@ export const sendMedicationReminderEmail = async (
       </div>
     `,
   };
-  await transporter.sendMail(mailOptions);
+  await sendMail(mailOptions);
 };
 
 export const sendDoctorReminderEmail = async (
@@ -432,7 +481,7 @@ export const sendDoctorReminderEmail = async (
   const safeReminder = escapeHtml(reminderText);
   const safeTime = escapeHtml(scheduledTime);
   const mailOptions = {
-    from: `"NeuroNest" <${process.env.EMAIL_USER}>`,
+    from: `"NeuroNest" <${EMAIL_FROM}>`,
     to: toEmail,
     subject: "Reminder from your NeuroNest doctor",
     html: `
@@ -447,5 +496,5 @@ export const sendDoctorReminderEmail = async (
       </div>
     `,
   };
-  await transporter.sendMail(mailOptions);
+  await sendMail(mailOptions);
 };

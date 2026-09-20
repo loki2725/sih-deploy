@@ -1,7 +1,7 @@
+import { apiClient } from "@/services/apiClient.js";
 import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Clock3 } from "lucide-react";
 import { T } from "@/models/constant.js";
-import { apiClient } from "@/services/apiClient.js";
 
 const formatDate = (value) =>
   new Date(value).toLocaleString(undefined, {
@@ -27,7 +27,7 @@ export function DoctorCareAlerts() {
   }, []);
 
   useEffect(() => {
-    loadAlerts();
+    queueMicrotask(loadAlerts);
     const timer = setInterval(loadAlerts, 30 * 1000);
     return () => clearInterval(timer);
   }, [loadAlerts]);

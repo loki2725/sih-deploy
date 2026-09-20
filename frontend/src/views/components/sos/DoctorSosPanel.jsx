@@ -1,7 +1,7 @@
+import { apiClient } from "@/services/apiClient.js";
 import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Clock3, ShieldCheck, X } from "lucide-react";
 import { T } from "@/models/constant.js";
-import { apiClient } from "@/services/apiClient.js";
 
 const SUCCESS_MESSAGE_MS = 10 * 60 * 1000;
 
@@ -38,7 +38,7 @@ export function DoctorSosPanel() {
   }, []);
 
   useEffect(() => {
-    loadAlerts();
+    queueMicrotask(loadAlerts);
     const timer = setInterval(loadAlerts, 10000);
     return () => clearInterval(timer);
   }, [loadAlerts]);

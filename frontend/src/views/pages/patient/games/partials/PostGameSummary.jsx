@@ -1,3 +1,6 @@
+import { T } from "@/models/constant.js";
+import { Card, Button } from "@/views/components/common/Primitive.jsx";
+
 export function PostGameSummary({ result, onBackHome }) {
   return (
     <div className="max-w-sm text-center mx-auto pt-8">

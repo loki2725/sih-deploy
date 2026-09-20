@@ -1,3 +1,4 @@
+import { apiClient } from "@/services/apiClient.js";
 import { API_BASE_URL } from "@/models/apiModel.js";
 import { useState, useEffect } from "react";
 import {
@@ -34,7 +35,7 @@ export function PatientProfile() {
       const token = localStorage.getItem("token") || user.token;
       if (!token) return;
 
-      const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+      const response = await apiClient(`${API_BASE_URL}/api/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -51,7 +52,7 @@ export function PatientProfile() {
   };
 
   useEffect(() => {
-    fetchProfile();
+    queueMicrotask(fetchProfile);
 
     // Refresh around midnight so the previous day's completed care plan
     // disappears from the patient view when the new day starts.
@@ -64,7 +65,7 @@ export function PatientProfile() {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       const token = localStorage.getItem("token") || user.token;
 
-      const res = await fetch(`${API_BASE_URL}/api/patient/doctors`, {
+      const res = await apiClient(`${API_BASE_URL}/api/patient/doctors`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -83,12 +84,12 @@ export function PatientProfile() {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       const token = localStorage.getItem("token") || user.token;
 
-      const res = await fetch(
+      const res = await apiClient(
         `${API_BASE_URL}/api/patient/request-doctor`,
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json`,
+            "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ doctorId }),

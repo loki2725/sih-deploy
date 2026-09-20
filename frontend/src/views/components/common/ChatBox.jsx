@@ -1,3 +1,4 @@
+import { apiClient } from "@/services/apiClient.js";
 import { API_BASE_URL } from "@/models/apiModel.js";
 import { useState, useEffect, useRef } from "react";
 import { Send } from "lucide-react";
@@ -17,27 +18,28 @@ export function ChatBox({ recipientId, recipientName }) {
   const userStr = localStorage.getItem("user");
   const user = userStr ? JSON.parse(userStr) : {};
   const token = localStorage.getItem("token") || user.token;
+  const currentUserId = String(user._id || user.id || "");
 
   // 1. Initialize and clean up socket connection
   useEffect(() => {
     const newSocket = createSocket({ auth: { token } });
-    setSocket(newSocket);
+    queueMicrotask(() => setSocket(newSocket));
 
     return () => {
       newSocket.disconnect();
     };
-  }, []);
+  }, [token]);
 
   // 2. Fetch or create the conversation room on load
   useEffect(() => {
     const initChat = async () => {
       try {
-        const response = await fetch(
+        const response = await apiClient(
           `${API_BASE_URL}/api/chat/conversation`,
           {
             method: "POST",
             headers: {
-              "Content-Type": "application/json`,
+              "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({ participantId: recipientId }),
@@ -52,7 +54,7 @@ export function ChatBox({ recipientId, recipientName }) {
             socket.emit("join_room", conv._id);
           }
 
-          const msgRes = await fetch(
+          const msgRes = await apiClient(
             `${API_BASE_URL}/api/chat/${conv._id}/messages`,
             {
               headers: { Authorization: `Bearer ${token}` },
@@ -144,7 +146,7 @@ export function ChatBox({ recipientId, recipientName }) {
           </div>
         ) : (
           messages.map((msg, index) => {
-            const isMe = msg.sender === currentUserId;
+            const isMe = String(msg.sender?._id || msg.sender || "") === currentUserId;
             return (
               <div
                 key={msg._id || index}
@@ -165,13 +167,12 @@ export function ChatBox({ recipientId, recipientName }) {
                   className="text-[10px] mt-1 px-1"
                   style={{ color: T.inkSoft }}
                 >
-                  {new Date(msg.createdAt || Date.now()).toLocaleTimeString(
-                    [],
-                    {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    },
-                  )}
+                  {msg.createdAt
+                    ? new Date(msg.createdAt).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : ""}
                 </span>
               </div>
             );

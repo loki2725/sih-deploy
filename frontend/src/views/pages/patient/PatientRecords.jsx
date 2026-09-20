@@ -1,3 +1,4 @@
+import { apiClient } from "@/services/apiClient.js";
 import { API_BASE_URL } from "@/models/apiModel.js";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -43,7 +44,7 @@ export function PatientRecords() {
   const fetchRecords = async () => {
     try {
       const token = getAuthToken();
-      const res = await fetch(`${API_BASE_URL}/api/records/mine`, {
+      const res = await apiClient(`${API_BASE_URL}/api/records/mine`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to load your records");
@@ -57,7 +58,7 @@ export function PatientRecords() {
   };
 
   useEffect(() => {
-    fetchRecords();
+    queueMicrotask(fetchRecords);
   }, []);
 
   const handleFileSelected = async (e) => {
@@ -75,8 +76,8 @@ export function PatientRecords() {
       // This single request covers the whole trip - multer receiving the
       // file, then us pushing it up to Cloudinary server-side - so
       // "pending" covers that entire window from the UI's perspective.
-      const res = await fetch(`${API_BASE_URL}/api/records/upload`, {
-        method: "POST`,
+      const res = await apiClient(`${API_BASE_URL}/api/records/upload`, {
+        method: "POST",
         headers: { Authorization: `Bearer ${token}` }, // don't set Content-Type - browser sets the multipart boundary
         body: formData,
       });
@@ -106,7 +107,7 @@ export function PatientRecords() {
     setDownloadingId(record._id);
     try {
       const token = getAuthToken();
-      const res = await fetch(
+      const res = await apiClient(
         `${API_BASE_URL}/api/records/${record._id}/download`,
         { headers: { Authorization: `Bearer ${token}` } },
       );

@@ -1,3 +1,4 @@
+import { apiClient } from "@/services/apiClient.js";
 import { API_BASE_URL } from "@/models/apiModel.js";
 import { useState, useEffect } from "react";
 import { ShieldAlert, Pencil, X, Check, Loader2 } from "lucide-react";
@@ -46,7 +47,7 @@ export function EmergencyDetailsCard({ details, onSaved }) {
   // (e.g. a fresh fetch), but only while we're not mid-edit.
   useEffect(() => {
     if (!isEditing) {
-      setForm({ ...EMPTY_DETAILS, ...details });
+      queueMicrotask(() => setForm({ ...EMPTY_DETAILS, ...details }));
     }
   }, [details, isEditing]);
 
@@ -69,12 +70,12 @@ export function EmergencyDetailsCard({ details, onSaved }) {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       const token = localStorage.getItem("token") || user.token;
 
-      const res = await fetch(
+      const res = await apiClient(
         `${API_BASE_URL}/api/patient/emergency-details`,
         {
           method: "PATCH",
           headers: {
-            "Content-Type": "application/json`,
+            "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(form),

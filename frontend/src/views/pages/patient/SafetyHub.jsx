@@ -1,9 +1,9 @@
+import { apiClient } from "@/services/apiClient.js";
 import { API_BASE_URL } from "@/models/apiModel.js";
 import { useState, useEffect } from "react";
 import {
   Siren,
   CheckCircle2,
-  ShieldAlert,
   CalendarClock,
   CalendarPlus,
   Clock3,
@@ -67,7 +67,7 @@ export function SafetyHub() {
 
   const fetchProfile = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
+      const res = await apiClient(`${API_BASE_URL}/api/auth/me`, {
         headers: authHeader(),
       });
       if (res.ok) {
@@ -75,7 +75,7 @@ export function SafetyHub() {
         setProfileData(data);
       }
     } catch (err) {
-      console.error("Failed to fetch profile:`, err);
+      console.error("Failed to fetch profile:", err);
     } finally {
       setLoading(false);
     }
@@ -83,7 +83,7 @@ export function SafetyHub() {
 
   const fetchAppointments = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/appointments/mine`, {
+      const res = await apiClient(`${API_BASE_URL}/api/appointments/mine`, {
         headers: authHeader(),
       });
       if (res.ok) {
@@ -91,7 +91,7 @@ export function SafetyHub() {
         setAppointments(data);
       }
     } catch (err) {
-      console.error("Failed to fetch appointments:`, err);
+      console.error("Failed to fetch appointments:", err);
     } finally {
       setLoadingAppointments(false);
     }
@@ -99,7 +99,7 @@ export function SafetyHub() {
 
   const fetchDoctors = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/patient/doctors`, {
+      const res = await apiClient(`${API_BASE_URL}/api/patient/doctors`, {
         headers: authHeader(),
       });
       if (res.ok) {
@@ -112,8 +112,12 @@ export function SafetyHub() {
   };
 
   useEffect(() => {
-    fetchProfile();
-    fetchAppointments();
+    queueMicrotask(() => {
+      fetchProfile();
+      fetchAppointments();
+    });
+    // These functions intentionally use the current auth token from storage.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSosPress = async () => {
@@ -128,7 +132,7 @@ export function SafetyHub() {
     setSosDetail("");
     try {
       if (!navigator.geolocation) {
-        throw new Error("Your browser does not support location access.`);
+        throw new Error("Your browser does not support location access.");
       }
 
       const position = await new Promise((resolve, reject) => {
@@ -139,7 +143,7 @@ export function SafetyHub() {
         });
       });
 
-      const res = await fetch(`${API_BASE_URL}/api/sos/alert`, {
+      const res = await apiClient(`${API_BASE_URL}/api/sos/alert`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -184,13 +188,13 @@ export function SafetyHub() {
     appointments.some(
       (a) =>
         a.doctorId?._id === doctorId &&
-        !["declined", "cancelled`].includes(a.status),
+        !["declined", "cancelled"].includes(a.status),
     );
 
   const handleRequestAppointment = async (doctorId) => {
     setRequestingId(doctorId);
     try {
-      const res = await fetch(
+      const res = await apiClient(
         `${API_BASE_URL}/api/appointments/request`,
         {
           method: "POST",
@@ -214,10 +218,10 @@ export function SafetyHub() {
   };
 
   const handleCancelAppointment = async (appointmentId) => {
-    if (!confirm("Cancel this appointment?`)) return;
+    if (!confirm("Cancel this appointment?")) return;
     setCancellingId(appointmentId);
     try {
-      const res = await fetch(
+      const res = await apiClient(
         `${API_BASE_URL}/api/appointments/${appointmentId}/cancel`,
         {
           method: "POST",
