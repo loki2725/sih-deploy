@@ -19,7 +19,7 @@ const enqueueNext = async (now = new Date()) => {
 const claimJob = async (now) => Job.findOneAndUpdate(
   { type: "care-reminder-check", status: "queued", runAt: { $lte: now }, $or: [{ lockedUntil: null }, { lockedUntil: { $lte: now } }] },
   { $set: { status: "running", lockedUntil: new Date(now.getTime() + LOCK_MS) }, $inc: { attempts: 1 } },
-  { sort: { runAt: 1 }, new: true },
+  { sort: { runAt: 1 }, returnDocument: "after" },
 );
 
 const processOne = async () => {

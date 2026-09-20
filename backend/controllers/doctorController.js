@@ -282,7 +282,7 @@ export const updateCareNotificationSettings = async (req, res, next) => {
     const doctor = await User.findByIdAndUpdate(
       req.user.id,
       { careNotificationsEnabled: enabled },
-      { new: true, runValidators: true },
+      { returnDocument: "after", runValidators: true },
     ).select("careNotificationsEnabled");
 
     if (!doctor) return res.status(404).json({ error: "Doctor not found" });

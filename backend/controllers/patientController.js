@@ -56,7 +56,7 @@ export const updateEmergencyDetails = async (req, res, next) => {
     const patient = await User.findByIdAndUpdate(
       req.user.id,
       { $set: update },
-      { new: true, runValidators: true },
+      { returnDocument: "after", runValidators: true },
     ).select("emergencyDetails");
 
     if (!patient) return res.status(404).json({ error: "Patient not found" });
@@ -98,7 +98,7 @@ export const checkCareItems = async (req, res, next) => {
     const patient = await User.findOneAndUpdate(
       { _id: req.user.id, role: "patient" },
       { $set: { careItemsLastCheckedAt: new Date() } },
-      { new: true },
+      { returnDocument: "after" },
     ).select("careItemsLastCheckedAt");
 
     if (!patient) return res.status(404).json({ error: "Patient not found" });

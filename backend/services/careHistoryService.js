@@ -66,7 +66,7 @@ const archiveMedication = async (doctorId, patientId, medication, dateKey, now) 
 
   const history = await CareHistory.findOneAndUpdate(query, update, {
     upsert: true,
-    new: true,
+    returnDocument: "after",
     setDefaultsOnInsert: true,
   });
 
@@ -108,7 +108,7 @@ const archiveReminder = async (doctorId, patientId, reminder, dateKey, now) => {
 
   const history = await CareHistory.findOneAndUpdate(query, update, {
     upsert: true,
-    new: true,
+    returnDocument: "after",
     setDefaultsOnInsert: true,
   });
 
