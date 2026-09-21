@@ -1,70 +1,95 @@
-import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 dotenv.config();
 
-// Reusable transporter using Gmail SMTP.
-// Requires EMAIL_USER (your gmail address) and EMAIL_PASS (a 16-char Gmail
-// "App Password" - NOT your normal Gmail password) set in backend/.env
-const EMAIL_USER = String(process.env.EMAIL_USER || "").trim();
-const EMAIL_PASS = String(process.env.EMAIL_PASS || "").replace(/\s+/g, "");
-const EMAIL_FROM = String(process.env.EMAIL_FROM || EMAIL_USER).trim();
+// Sends email via Brevo's HTTPS transactional API instead of SMTP.
+// This matters specifically because Render's free tier blocks outbound
+// SMTP (ports 25/465/587) as of Sept 2025 - HTTPS (443) is never blocked
+// that way. Brevo was chosen over Resend because Brevo's free tier can
+// send to ANY recipient with just a verified sender address (no owned
+// domain required), whereas Resend's free tier only sends to the account
+// owner's own address without a verified custom domain.
+//
+// Requires BREVO_API_KEY and EMAIL_FROM (a sender address verified in your
+// Brevo account) set in backend/.env
+const EMAIL_FROM = String(process.env.EMAIL_FROM || "").trim();
+const BREVO_API_KEY = String(process.env.BREVO_API_KEY || "").trim();
 const EMAIL_TIMEOUT_MS = Number(process.env.EMAIL_SEND_TIMEOUT_MS || 12000);
 
-const smtpOptions = process.env.EMAIL_HOST
-  ? {
-      host: String(process.env.EMAIL_HOST).trim(),
-      port: Number(process.env.EMAIL_PORT || 587),
-      secure: String(process.env.EMAIL_SECURE || "false").toLowerCase() === "true",
-      pool: true,
-      maxConnections: 3,
-      maxMessages: 50,
-      connectionTimeout: Number(process.env.EMAIL_CONNECTION_TIMEOUT_MS || 8000),
-      greetingTimeout: Number(process.env.EMAIL_GREETING_TIMEOUT_MS || 8000),
-      socketTimeout: Number(process.env.EMAIL_SOCKET_TIMEOUT_MS || 10000),
-      auth: { user: EMAIL_USER, pass: EMAIL_PASS },
-    }
-  : {
-      service: "gmail",
-      pool: true,
-      maxConnections: 3,
-      maxMessages: 50,
-      connectionTimeout: Number(process.env.EMAIL_CONNECTION_TIMEOUT_MS || 8000),
-      greetingTimeout: Number(process.env.EMAIL_GREETING_TIMEOUT_MS || 8000),
-      socketTimeout: Number(process.env.EMAIL_SOCKET_TIMEOUT_MS || 10000),
-      auth: { user: EMAIL_USER, pass: EMAIL_PASS },
-    };
-
-const transporter = nodemailer.createTransport(smtpOptions);
-
 const assertEmailConfiguration = () => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email service is not configured. Set EMAIL_USER and EMAIL_PASS in the backend environment.");
+  if (!EMAIL_FROM || !BREVO_API_KEY) {
+    throw new Error(
+      "Email service is not configured. Set BREVO_API_KEY and EMAIL_FROM in the backend environment.",
+    );
   }
+};
+
+// Parses a `"Name" <email@example.com>` string (the shape every function
+// below already builds for "from") or a plain email address into the
+// {name, email} object Brevo's API expects.
+const parseAddress = (value) => {
+  const match = String(value).match(/^"?([^"<]*)"?\s*<([^>]+)>\s*$/);
+  if (match) {
+    return { name: match[1].trim() || undefined, email: match[2].trim() };
+  }
+  return { email: String(value).trim() };
 };
 
 const sendMail = async (mailOptions) => {
   assertEmailConfiguration();
   const timeout = Math.max(3000, EMAIL_TIMEOUT_MS);
-  let timer;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
 
   try {
-    return await Promise.race([
-      transporter.sendMail({ ...mailOptions, from: mailOptions.from || `"NeuroNest" <${EMAIL_FROM}>` }),
-      new Promise((_, reject) => {
-        timer = setTimeout(
-          () => reject(new Error("Email delivery timed out. Check the SMTP configuration and network access.")),
-          timeout,
-        );
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "api-key": BREVO_API_KEY,
+      },
+      body: JSON.stringify({
+        sender: parseAddress(
+          mailOptions.from || `"NeuroNest" <${EMAIL_FROM}>`,
+        ),
+        to: [parseAddress(mailOptions.to)],
+        subject: mailOptions.subject,
+        htmlContent: mailOptions.html,
       }),
-    ]);
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => "");
+      throw new Error(
+        `Brevo API error (${response.status}): ${errorBody || response.statusText}`,
+      );
+    }
+
+    return await response.json();
+  } catch (error) {
+    if (error.name === "AbortError") {
+      throw new Error(
+        "Email delivery timed out. Check the Brevo API configuration and network access.",
+      );
+    }
+    throw error;
   } finally {
-    if (timer) clearTimeout(timer);
+    clearTimeout(timer);
   }
 };
 
 export const verifyEmailTransport = async () => {
   assertEmailConfiguration();
-  await transporter.verify();
+  // Brevo has no dedicated "verify SMTP connection" call the way nodemailer
+  // does - a lightweight authenticated GET confirms the API key is valid
+  // and reachable instead.
+  const response = await fetch("https://api.brevo.com/v3/account", {
+    headers: { Accept: "application/json", "api-key": BREVO_API_KEY },
+  });
+  if (!response.ok) {
+    throw new Error(`Brevo API key check failed (${response.status})`);
+  }
 };
 
 
