@@ -1,7 +1,8 @@
 import { apiClient } from "@/services/apiClient.js";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Brain, Activity } from "lucide-react";
+import { Activity } from "lucide-react";
+import { BrainLogo } from "@/views/components/common/BrainLogo.jsx";
 import { T } from "@/models/constant.js";
 import { API_BASE_URL } from "@/models/apiModel.js";
 import { Button, Card } from "@/views/components/common/Primitive.jsx";
@@ -37,6 +38,16 @@ export function LoginScreen() {
     }, 1000);
     return () => clearInterval(timer);
   }, [resendCooldown]);
+
+  // Fire a lightweight ping the moment this screen loads, to start waking
+  // a spun-down Render free-tier instance in the background - by the time
+  // someone finishes typing their email/password, the backend has a head
+  // start rather than only waking up once they hit submit. Deliberately
+  // fire-and-forget: failures here are silent since this is just a warm-up,
+  // not something the user needs to know about.
+  useEffect(() => {
+    apiClient("/api/health", { timeoutMs: 30000 }).catch(() => {});
+  }, []);
 
   // If account creation or OTP delivery takes longer than 5 seconds,
   // show a short reassurance message. Hide it after 3 seconds, or
@@ -235,7 +246,7 @@ export function LoginScreen() {
           background: `linear-gradient(135deg, ${T.primaryDark} 0%, ${T.primary} 100%)`,
         }}
       >
-        <Brain
+        <BrainLogo
           className="absolute -bottom-24 -left-24 text-white opacity-10 transform -rotate-12"
           size={450}
         />
@@ -247,7 +258,7 @@ export function LoginScreen() {
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-16">
             <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-md shadow-sm">
-              <Brain size={22} color="#fff" />
+              <BrainLogo size={22} color="#fff" />
             </div>
             <span className="text-white font-bold text-xl tracking-wide">
               NeuroNest
@@ -389,7 +400,7 @@ export function LoginScreen() {
                     className="w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-inner"
                     style={{ background: T.primarySoft }}
                   >
-                    <Brain size={32} color={T.primary} />
+                    <BrainLogo size={32} color={T.primary} />
                   </div>
                   <h2 className="text-3xl font-extrabold mb-2 text-[#3F6F68]">
                     Welcome to NeuroNest

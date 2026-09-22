@@ -141,20 +141,39 @@ export function AccountSettings({ onLogout }) {
             </button>
           </div>
 
-          <div
-            className="mt-4 rounded-xl p-3 text-xs"
-            style={{
-              background: careNotificationsEnabled ? T.primarySoft : T.canvas,
-              color: T.inkSoft,
-            }}
-          >
-            <strong style={{ color: T.ink }}>
-              {careNotificationsEnabled ? "Notifications are ON." : "Notifications are OFF."}
-            </strong>{" "}
-            {careNotificationsEnabled
-              ? "You will receive doctor-side alerts. Patient reminders continue independently."
-              : "No new doctor-side care notifications will be generated. Patient reminder emails are not affected."}
-          </div>
+          {careNotificationsEnabled ? (
+            <div
+              className="mt-4 rounded-xl p-3 text-xs"
+              style={{ background: T.primarySoft, color: T.inkSoft }}
+            >
+              <strong style={{ color: T.ink }}>Notifications are ON.</strong>{" "}
+              You will receive doctor-side alerts. Patient reminders continue independently.
+            </div>
+          ) : (
+            <div
+              className="mt-4 rounded-xl p-4 flex items-start gap-3"
+              style={{
+                background: T.redSoft,
+                border: `1.5px solid ${T.red}`,
+              }}
+            >
+              <AlertTriangle size={20} color={T.red} className="flex-shrink-0 mt-0.5" />
+              <div className="text-sm" style={{ color: T.ink }}>
+                <strong style={{ color: T.red }}>Heads up — notifications are currently off.</strong>{" "}
+                <p className="mt-1.5" style={{ color: T.inkSoft }}>
+                  While this is switched off, you won't be notified about anything happening with your
+                  patients - including if one misses their morning game or leaves a medication or
+                  reminder incomplete. Patient-side reminder emails still work fine either way; this only
+                  affects alerts sent to you.
+                </p>
+                <p className="mt-1.5" style={{ color: T.inkSoft }}>
+                  This was originally left off just so the team wouldn't be pinged constantly while the
+                  app was still being built. If you'd like to start receiving real alerts about your
+                  patients, please switch it on above whenever you're ready.
+                </p>
+              </div>
+            </div>
+          )}
         </Card>
       )}
 

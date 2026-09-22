@@ -18,7 +18,7 @@ const EMPTY_DETAILS = {
 const FIELDS = [
   { key: "contactName", label: "Contact Name", placeholder: "e.g. Priya Sharma" },
   { key: "relationship", label: "Relationship", placeholder: "e.g. Daughter" },
-  { key: "phone", label: "Phone Number", placeholder: "e.g. +91 98765 43210" },
+  { key: "phone", label: "Phone Number", placeholder: "e.g. +91 98765 XXXXX" },
   { key: "altPhone", label: "Alternate Phone", placeholder: "Optional" },
   { key: "address", label: "Home Address", placeholder: "Optional" },
   {
